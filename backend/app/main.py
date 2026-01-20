@@ -4,6 +4,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import timedelta
 from typing import List
+import qrcode
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+import os # Para leer el .env
 
 # Importamos todos nuestros módulos
 from . import models, database, schemas, crud, auth
@@ -66,3 +70,57 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 @app.get("/users/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
+
+# --- 5. CREAR MEMORIAL (Protegido) ---
+@app.post("/memorials/", response_model=schemas.MemorialResponse)
+def create_memorial(
+    memorial: schemas.MemorialCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user) # <--- EL GUARDIÁN
+):
+    # current_user viene del token. Usamos su ID para crear el memorial.
+    return crud.create_memorial(db=db, memorial=memorial, user_id=current_user.id)
+
+# --- 6. VER MIS MEMORIALES (Protegido) ---
+@app.get("/memorials/", response_model=List[schemas.MemorialResponse])
+def read_my_memorials(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return crud.get_memorials_by_user(db=db, user_id=current_user.id)
+
+# --- 7. DESCARGAR IMAGEN QR (Protegido) ---
+@app.get("/memorials/{slug}/qr")
+def get_qr_code(slug: str, current_user: models.User = Depends(auth.get_current_user)):
+    # 1. Construir la URL final (Ej: http://localhost:3000/view/abuelo-pedro-xxxx)
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:3000/view")
+    target_url = f"{base_url}/{slug}"
+    
+    # 2. Generar el QR
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H, # H = Alta corrección (soporta daños)
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(target_url)
+    qr.make(fit=True)
+
+    # 3. Crear la imagen en memoria (Ram)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # 4. Convertir a Bytes para enviarla por HTTP
+    img_byte_arr = BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    
+    # 5. Devolver como respuesta de imagen
+    return StreamingResponse(img_byte_arr, media_type="image/png")
+
+# --- 8. VER MEMORIAL PÚBLICO (Sin candado) ---
+@app.get("/public/memorials/{slug}", response_model=schemas.PublicMemorial)
+def read_public_memorial(slug: str, db: Session = Depends(get_db)):
+    db_memorial = crud.get_memorial_by_slug(db, slug=slug)
+    if db_memorial is None:
+        raise HTTPException(status_code=404, detail="Memorial no encontrado")
+    return db_memorial
