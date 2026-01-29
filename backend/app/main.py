@@ -8,6 +8,7 @@ import qrcode
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 import os # Para leer el .env
+from fastapi.middleware.cors import CORSMiddleware # <--- IMPORTAR
 
 # Importamos todos nuestros módulos
 from . import models, database, schemas, crud, auth
@@ -16,6 +17,21 @@ from . import models, database, schemas, crud, auth
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Memorial QR API", version="0.1.0")
+
+# --- CONFIGURACIÓN DE CORS (Permitir conexión con React) ---
+origins = [
+    "http://localhost:5173", # Puerto por defecto de Vite
+    "http://localhost:3000", # Puerto alternativo común
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Permitir GET, POST, PUT, DELETE
+    allow_headers=["*"], # Permitir Tokens y Auth headers
+)
 
 # Dependencia para obtener la sesión de BD
 def get_db():
