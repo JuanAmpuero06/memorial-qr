@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 
-function Login({ onLoginSuccess }) {
+function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -12,8 +14,6 @@ function Login({ onLoginSuccess }) {
 
     try {
       // 1. Enviamos los datos al endpoint que creamos en FastAPI
-      // Nota: OAuth2 espera datos en formato form-data, no JSON puro a veces,
-      // pero FastAPI acepta x-www-form-urlencoded. Axios lo maneja así:
       const formData = new URLSearchParams();
       formData.append('username', email); // FastAPI usa 'username' para el email
       formData.append('password', password);
@@ -26,8 +26,8 @@ function Login({ onLoginSuccess }) {
       const token = response.data.access_token;
       localStorage.setItem('token', token);
       
-      // 3. Avisamos a App.jsx que ya entramos
-      onLoginSuccess();
+      // 3. Redirigir al dashboard
+      navigate('/');
       
     } catch (err) {
       console.error(err);
@@ -64,6 +64,13 @@ function Login({ onLoginSuccess }) {
           Entrar
         </button>
       </form>
+      
+      <div className="mt-4 text-center text-sm text-gray-600">
+        ¿No tienes cuenta?{' '}
+        <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+          Regístrate aquí
+        </Link>
+      </div>
     </div>
   );
 }

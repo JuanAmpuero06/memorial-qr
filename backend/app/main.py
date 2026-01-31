@@ -1,186 +1,135 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from datetime import timedelta
-from typing import List
-from fastapi import File, UploadFile
+"""
+Aplicación principal de Memorial QR API
+Arquitectura limpia con separación de responsabilidades
+"""
+import os
+from fastapi import FastAPI, Depends, File, UploadFile
 from fastapi.staticfiles import StaticFiles
-import qrcode
-import uuid
-import shutil
-from io import BytesIO
-from fastapi.responses import StreamingResponse
-import os # Para leer el .env
-from fastapi.middleware.cors import CORSMiddleware # <--- IMPORTAR
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from typing import List
 
-# Importamos todos nuestros módulos
-from . import models, database, schemas, crud, auth
-
-# Crear tablas en BD
-models.Base.metadata.create_all(bind=database.engine)
-
-app = FastAPI(title="Memorial QR API", version="0.1.0")
-
-# Configuración del directorio de subida de imágenes
-# --- CONFIGURACIÓN DE IMÁGENES ---
-# Crear la carpeta si no existe
-UPLOAD_DIR = "uploaded_images"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Esto hace que lo que esté en la carpeta "uploaded_images" sea visible en "http://localhost:8000/static"
-app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
+from app.config import settings
+from app.db import Base, engine, get_db
+from app.api.v1 import api_router
+from app.models import User
+from app.schemas import MemorialCreate, MemorialResponse, PublicMemorial
+from app.api.deps import get_current_user
+from app.services import MemorialService, QRService
 
 
-# --- CONFIGURACIÓN DE CORS (Permitir conexión con React) ---
-origins = [
-    "http://localhost:5173", # Puerto por defecto de Vite
-    "http://localhost:3000", # Puerto alternativo común
-    "http://127.0.0.1:5173",
-]
+# Crear tablas en la base de datos
+Base.metadata.create_all(bind=engine)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"], # Permitir GET, POST, PUT, DELETE
-    allow_headers=["*"], # Permitir Tokens y Auth headers
+# Inicializar aplicación
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# Dependencia para obtener la sesión de BD
-def get_db():
-    db = database.SessionLocal()
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Configurar directorio de archivos estáticos
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
+
+# Incluir routers de la API v1
+app.include_router(api_router, prefix="/api/v1")
+
+
+# ===== Endpoints de utilidad =====
+@app.get("/")
+async def root():
+    """Endpoint raíz"""
+    return {
+        "message": "Memorial QR API",
+        "version": settings.APP_VERSION,
+        "docs": "/docs"
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint
+    Verifica el estado de la aplicación y la base de datos
+    """
+    db = next(get_db())
     try:
-        yield db
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "message": "Todo correcto 🚀"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }
     finally:
         db.close()
 
-# --- 1. ENDPOINT DE SALUD (Health Check) ---
-@app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("SELECT 1"))
-        return {"database": "online", "status": "Todo correcto 🚀"}
-    except Exception as e:
-        return {"database": "offline", "error": str(e)}
 
-# --- 2. ENDPOINT DE REGISTRO (El que te faltaba) ---
-@app.post("/users/", response_model=schemas.UserResponse)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Verificar si email ya existe
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="El email ya está registrado")
-    # Crear usuario
-    return crud.create_user(db=db, user=user)
+# ===== Endpoints legacy (compatibilidad con frontend actual) =====
+from app.api.v1.endpoints import auth, users
 
-# --- 3. ENDPOINT DE LOGIN (Obtener Token) ---
-@app.post("/token", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Buscar usuario
-    user = crud.get_user_by_email(db, email=form_data.username)
-    
-    # Verificar contraseña
-    if not user or not crud.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Generar Token
-    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = auth.create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+# Rutas de autenticación sin prefijo para compatibilidad
+app.include_router(auth.router, tags=["auth (legacy)"])
 
-# --- 4. ENDPOINT PROTEGIDO (Prueba de seguridad) ---
-@app.get("/users/me", response_model=schemas.UserResponse)
-def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
-    return current_user
+# Rutas de usuarios con prefijo
+app.include_router(users.router, prefix="/users", tags=["users (legacy)"])
 
-# --- 5. CREAR MEMORIAL (Protegido) ---
-@app.post("/memorials/", response_model=schemas.MemorialResponse)
-def create_memorial(
-    memorial: schemas.MemorialCreate, 
+# Rutas de memorials - manteniendo compatibilidad con frontend
+@app.post("/memorials/", response_model=MemorialResponse, status_code=201, tags=["memorials (legacy)"])
+async def create_memorial_legacy(
+    memorial: MemorialCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user) # <--- EL GUARDIÁN
+    current_user: User = Depends(get_current_user)
 ):
-    # current_user viene del token. Usamos su ID para crear el memorial.
-    return crud.create_memorial(db=db, memorial=memorial, user_id=current_user.id)
+    """Crear memorial (endpoint legacy)"""
+    return MemorialService.create_memorial(db, memorial, current_user.id)
 
-# --- 6. VER MIS MEMORIALES (Protegido) ---
-@app.get("/memorials/", response_model=List[schemas.MemorialResponse])
-def read_my_memorials(
+
+@app.get("/memorials/", response_model=List[MemorialResponse], tags=["memorials (legacy)"])
+async def get_memorials_legacy(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    return crud.get_memorials_by_user(db=db, user_id=current_user.id)
+    """Obtener memoriales del usuario (endpoint legacy)"""
+    return MemorialService.get_user_memorials(db, current_user.id)
 
-# --- 7. DESCARGAR IMAGEN QR (Protegido) ---
-@app.get("/memorials/{slug}/qr")
-def get_qr_code(slug: str, current_user: models.User = Depends(auth.get_current_user)):
-    # 1. Construir la URL final (Ej: http://localhost:3000/view/abuelo-pedro-xxxx)
-    base_url = os.getenv("FRONTEND_URL", "http://localhost:3000/view")
-    target_url = f"{base_url}/{slug}"
-    
-    # 2. Generar el QR
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H, # H = Alta corrección (soporta daños)
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(target_url)
-    qr.make(fit=True)
 
-    # 3. Crear la imagen en memoria (Ram)
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # 4. Convertir a Bytes para enviarla por HTTP
-    img_byte_arr = BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
-    
-    # 5. Devolver como respuesta de imagen
-    return StreamingResponse(img_byte_arr, media_type="image/png")
+@app.get("/public/memorials/{slug}", response_model=PublicMemorial, tags=["memorials (legacy)"])
+async def get_public_memorial_legacy(slug: str, db: Session = Depends(get_db)):
+    """Obtener memorial público (endpoint legacy)"""
+    return MemorialService.get_public_memorial(db, slug)
 
-# --- 8. VER MEMORIAL PÚBLICO (Sin candado) ---
-@app.get("/public/memorials/{slug}", response_model=schemas.PublicMemorial)
-def read_public_memorial(slug: str, db: Session = Depends(get_db)):
-    db_memorial = crud.get_memorial_by_slug(db, slug=slug)
-    if db_memorial is None:
-        raise HTTPException(status_code=404, detail="Memorial no encontrado")
-    return db_memorial
 
-# --- 9. SUBIR FOTO (Protegido) ---
-@app.post("/memorials/{memorial_id}/upload-photo", response_model=schemas.MemorialResponse)
-def upload_photo(
+@app.get("/memorials/{slug}/qr", tags=["memorials (legacy)"])
+async def get_qr_legacy(slug: str, current_user: User = Depends(get_current_user)):
+    """Generar QR (endpoint legacy)"""
+    return QRService.generate_qr(slug)
+
+
+@app.post("/memorials/{memorial_id}/upload-photo", response_model=MemorialResponse, tags=["memorials (legacy)"])
+async def upload_photo_legacy(
     memorial_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    # 1. Buscar el memorial y verificar que sea del usuario
-    memorial = db.query(models.Memorial).filter(models.Memorial.id == memorial_id).first()
-    if not memorial:
-        raise HTTPException(status_code=404, detail="Memorial no encontrado")
-    if memorial.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="No tienes permiso para editar este memorial")
+    """Subir foto (endpoint legacy)"""
+    return await MemorialService.upload_photo(db, memorial_id, file, current_user)
 
-    # 2. Generar un nombre único para el archivo (para evitar sobreescribir)
-    # Ej: "foto-perfil.jpg" -> "a1b2c3d4... .jpg"
-    file_extension = file.filename.split(".")[-1]
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = f"{UPLOAD_DIR}/{unique_filename}"
-
-    # 3. Guardar el archivo en el disco
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # 4. Actualizar la base de datos
-    memorial.image_filename = unique_filename
-    db.commit()
-    db.refresh(memorial)
