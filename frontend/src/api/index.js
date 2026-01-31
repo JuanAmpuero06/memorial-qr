@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Usamos la variable de entorno que definimos en docker-compose, 
 // o localhost por defecto si corremos fuera de docker.
-const API_URL = 'http://localhost:8000'; 
+// Con Traefik, todo pasa por el puerto 80
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost'; 
 
 const api = axios.create({
   baseURL: API_URL,

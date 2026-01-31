@@ -41,6 +41,9 @@ services:
       - "8000"
     env_file:
       - .env
+    environment:
+      - BACKEND_URL=http://localhost
+      - FRONTEND_URL=http://localhost
     depends_on:
       - db
     networks:
