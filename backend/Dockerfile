@@ -15,5 +15,9 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 # Copiamos el código
 COPY ./app /code/app
 
+# Copiamos tests y configuración de pytest
+COPY ./tests /code/tests
+COPY pytest.ini /code/
+
 # Comando para iniciar el servidor
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
