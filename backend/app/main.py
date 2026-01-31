@@ -3,12 +3,14 @@ Aplicación principal de Memorial QR API
 Arquitectura limpia con separación de responsabilidades
 """
 import os
-from fastapi import FastAPI, Depends, File, UploadFile
+from fastapi import FastAPI, Depends, File, UploadFile, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.db import Base, engine, get_db
@@ -17,6 +19,7 @@ from app.models import User, Memorial, Visit, Reaction
 from app.schemas import MemorialCreate, MemorialResponse, MemorialUpdate, PublicMemorial
 from app.api.deps import get_current_user
 from app.services import MemorialService, QRService
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 
 
 # Crear tablas en la base de datos
@@ -29,6 +32,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Configurar Rate Limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Configurar CORS
 app.add_middleware(

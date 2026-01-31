@@ -11,13 +11,16 @@ from app.schemas import DashboardAnalytics, MemorialReactions, ReactionCreate
 from app.services import AnalyticsService
 from app.api.deps import get_current_user
 from app.repositories import MemorialRepository, VisitRepository
+from app.core.rate_limit import limiter, RateLimits
 
 
 router = APIRouter()
 
 
 @router.get("/dashboard", response_model=DashboardAnalytics)
+@limiter.limit(RateLimits.ANALYTICS)
 async def get_dashboard_analytics(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     start_date: Optional[date] = Query(None, description="Fecha inicio (YYYY-MM-DD)"),
@@ -93,6 +96,7 @@ async def get_filtered_analytics(
 
 
 @router.post("/visit/{slug}")
+@limiter.limit(RateLimits.PUBLIC_READ)
 async def register_visit(
     slug: str,
     request: Request,
@@ -102,6 +106,7 @@ async def register_visit(
 ):
     """
     Registrar una visita a un memorial (endpoint público)
+    Rate limit: 30 visitas por minuto por IP
     
     Args:
         slug: Slug del memorial
@@ -163,13 +168,16 @@ async def get_location_stats(
 
 
 @router.get("/reactions/{slug}", response_model=MemorialReactions)
+@limiter.limit(RateLimits.PUBLIC_READ)
 async def get_reactions(
+    request: Request,
     slug: str,
     visitor_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
     Obtener reacciones de un memorial (endpoint público)
+    Rate limit: 30 peticiones por minuto
     
     Args:
         slug: Slug del memorial
@@ -186,13 +194,16 @@ async def get_reactions(
 
 
 @router.post("/reactions/{slug}")
+@limiter.limit(RateLimits.PUBLIC_WRITE)
 async def toggle_reaction(
+    request: Request,
     slug: str,
     reaction_data: ReactionCreate,
     db: Session = Depends(get_db)
 ):
     """
     Toggle de reacción en un memorial (endpoint público)
+    Rate limit: 10 reacciones por minuto (prevenir spam)
     
     Args:
         slug: Slug del memorial

@@ -12,6 +12,7 @@ from app.schemas import (
 )
 from app.services import CondolenceService
 from app.api.deps import get_current_user
+from app.core.rate_limit import limiter, RateLimits
 
 
 router = APIRouter()
@@ -20,7 +21,9 @@ router = APIRouter()
 # ============ ENDPOINTS PÚBLICOS ============
 
 @router.get("/{slug}", response_model=CondolenceListResponse)
+@limiter.limit(RateLimits.PUBLIC_READ)
 async def get_condolences(
+    request: Request,
     slug: str,
     limit: int = Query(default=50, le=100),
     offset: int = Query(default=0, ge=0),
@@ -28,6 +31,7 @@ async def get_condolences(
 ):
     """
     Obtener condolencias aprobadas de un memorial (público)
+    Rate limit: 30 peticiones por minuto
     
     Args:
         slug: Slug del memorial
@@ -43,6 +47,7 @@ async def get_condolences(
 
 
 @router.post("/{slug}", response_model=CondolenceResponse, status_code=201)
+@limiter.limit(RateLimits.PUBLIC_WRITE)
 async def create_condolence(
     slug: str,
     condolence: CondolenceCreate,
@@ -51,6 +56,7 @@ async def create_condolence(
 ):
     """
     Crear nueva condolencia (público, requiere moderación)
+    Rate limit: 10 condolencias por minuto (prevenir spam)
     
     Args:
         slug: Slug del memorial

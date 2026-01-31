@@ -1,5 +1,37 @@
 # Configuración dinámica de Traefik
 http:
+  # Middlewares de Rate Limiting
+  middlewares:
+    # Rate limit global - 100 requests por segundo por IP
+    global-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Rate limit estricto para endpoints sensibles - 10 requests por minuto por IP
+    strict-ratelimit:
+      rateLimit:
+        average: 10
+        burst: 5
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Rate limit para API general - 60 requests por minuto por IP
+    api-ratelimit:
+      rateLimit:
+        average: 60
+        burst: 20
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
   routers:
     # Router para el Backend API
     backend-api:
@@ -7,6 +39,8 @@ http:
       entryPoints:
         - web
       service: backend
+      middlewares:
+        - api-ratelimit
       priority: 10
 
     # Router para documentación
@@ -39,6 +73,8 @@ http:
       entryPoints:
         - web
       service: frontend
+      middlewares:
+        - global-ratelimit
       priority: 1
 
   services:
