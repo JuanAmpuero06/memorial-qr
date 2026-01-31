@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import User
-from app.schemas import MemorialCreate, MemorialResponse, PublicMemorial
+from app.schemas import MemorialCreate, MemorialUpdate, MemorialResponse, PublicMemorial
 from app.services import MemorialService, QRService
 from app.api.deps import get_current_user
 
@@ -108,3 +108,65 @@ async def upload_photo(
         Memorial actualizado
     """
     return await MemorialService.upload_photo(db, memorial_id, file, current_user)
+
+
+@router.get("/{memorial_id}", response_model=MemorialResponse)
+async def get_memorial(
+    memorial_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener un memorial específico por ID
+    
+    Args:
+        memorial_id: ID del memorial
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        Memorial encontrado
+    """
+    return MemorialService.get_memorial_by_id(db, memorial_id, current_user)
+
+
+@router.put("/{memorial_id}", response_model=MemorialResponse)
+async def update_memorial(
+    memorial_id: int,
+    memorial_data: MemorialUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualizar un memorial existente
+    
+    Args:
+        memorial_id: ID del memorial
+        memorial_data: Datos a actualizar
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        Memorial actualizado
+    """
+    return MemorialService.update_memorial(db, memorial_id, memorial_data, current_user)
+
+
+@router.delete("/{memorial_id}")
+async def delete_memorial(
+    memorial_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Eliminar un memorial
+    
+    Args:
+        memorial_id: ID del memorial
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+        
+    Returns:
+        Mensaje de confirmación
+    """
+    return MemorialService.delete_memorial(db, memorial_id, current_user)

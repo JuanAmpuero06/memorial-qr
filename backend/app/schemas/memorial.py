@@ -20,6 +20,15 @@ class MemorialCreate(MemorialBase):
     death_date: Optional[str] = None
 
 
+class MemorialUpdate(BaseModel):
+    """Schema para actualizar memorial"""
+    name: Optional[str] = None
+    epitaph: Optional[str] = None
+    bio: Optional[str] = None
+    birth_date: Optional[str] = None
+    death_date: Optional[str] = None
+
+
 class MemorialResponse(MemorialCreate):
     """Schema de respuesta de memorial"""
     id: int

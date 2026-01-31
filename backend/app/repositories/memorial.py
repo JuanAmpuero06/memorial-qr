@@ -56,6 +56,16 @@ class MemorialRepository:
         return memorial
     
     @staticmethod
+    def update(db: Session, memorial: Memorial, memorial_data: dict) -> Memorial:
+        """Actualizar un memorial"""
+        for key, value in memorial_data.items():
+            if value is not None:
+                setattr(memorial, key, value)
+        db.commit()
+        db.refresh(memorial)
+        return memorial
+    
+    @staticmethod
     def delete(db: Session, memorial: Memorial) -> None:
         """Eliminar un memorial"""
         db.delete(memorial)

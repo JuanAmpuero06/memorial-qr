@@ -9,7 +9,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from app.models import Memorial, User
 from app.repositories import MemorialRepository
-from app.schemas import MemorialCreate
+from app.schemas import MemorialCreate, MemorialUpdate
 from app.config import settings
 
 
@@ -119,3 +119,109 @@ class MemorialService:
         
         # Actualizar BD
         return MemorialRepository.update_image(db, memorial, unique_filename)
+
+    @staticmethod
+    def get_memorial_by_id(db: Session, memorial_id: int, current_user: User) -> Memorial:
+        """
+        Obtener un memorial por ID verificando permisos
+        
+        Args:
+            db: Sesión de base de datos
+            memorial_id: ID del memorial
+            current_user: Usuario actual
+            
+        Returns:
+            Memorial encontrado
+            
+        Raises:
+            HTTPException: Si el memorial no existe o el usuario no tiene permiso
+        """
+        memorial = MemorialRepository.get_by_id(db, memorial_id)
+        if not memorial:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Memorial no encontrado"
+            )
+        
+        if memorial.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para ver este memorial"
+            )
+        return memorial
+
+    @staticmethod
+    def update_memorial(
+        db: Session,
+        memorial_id: int,
+        memorial_data: MemorialUpdate,
+        current_user: User
+    ) -> Memorial:
+        """
+        Actualizar un memorial existente
+        
+        Args:
+            db: Sesión de base de datos
+            memorial_id: ID del memorial
+            memorial_data: Datos a actualizar
+            current_user: Usuario actual
+            
+        Returns:
+            Memorial actualizado
+            
+        Raises:
+            HTTPException: Si el memorial no existe o el usuario no tiene permiso
+        """
+        memorial = MemorialRepository.get_by_id(db, memorial_id)
+        if not memorial:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Memorial no encontrado"
+            )
+        
+        if memorial.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para editar este memorial"
+            )
+        
+        update_data = memorial_data.model_dump(exclude_unset=True)
+        return MemorialRepository.update(db, memorial, update_data)
+
+    @staticmethod
+    def delete_memorial(db: Session, memorial_id: int, current_user: User) -> dict:
+        """
+        Eliminar un memorial
+        
+        Args:
+            db: Sesión de base de datos
+            memorial_id: ID del memorial
+            current_user: Usuario actual
+            
+        Returns:
+            Mensaje de confirmación
+            
+        Raises:
+            HTTPException: Si el memorial no existe o el usuario no tiene permiso
+        """
+        memorial = MemorialRepository.get_by_id(db, memorial_id)
+        if not memorial:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Memorial no encontrado"
+            )
+        
+        if memorial.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para eliminar este memorial"
+            )
+        
+        # Eliminar imagen si existe
+        if memorial.image_filename:
+            image_path = f"{settings.UPLOAD_DIR}/{memorial.image_filename}"
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        
+        MemorialRepository.delete(db, memorial)
+        return {"message": "Memorial eliminado exitosamente"}
