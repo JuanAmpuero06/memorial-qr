@@ -8,8 +8,12 @@ function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [selectedMemorial, setSelectedMemorial] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   
   // Estado para el formulario
   const [formData, setFormData] = useState({
@@ -171,6 +175,57 @@ function Dashboard() {
     window.open(`/memorial/${slug}`, '_blank');
   };
 
+  // Abrir modal de galería
+  const openGalleryModal = async (memorial) => {
+    setSelectedMemorial(memorial);
+    setShowGalleryModal(true);
+    setGalleryLoading(true);
+    try {
+      const response = await api.get(`/api/v1/gallery/public/${memorial.slug}`);
+      setGalleryItems(response.data.items || []);
+    } catch (error) {
+      console.error('Error cargando galería:', error);
+      setGalleryItems([]);
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
+  // Subir foto a galería
+  const handleGalleryUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedMemorial) return;
+
+    setUploadingGallery(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      await api.post(`/api/v1/gallery/${selectedMemorial.id}`, formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      // Recargar galería
+      const response = await api.get(`/api/v1/gallery/public/${selectedMemorial.slug}`);
+      setGalleryItems(response.data.items || []);
+    } catch (error) {
+      console.error('Error subiendo a galería:', error);
+      alert('Error al subir la imagen a la galería');
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  // Eliminar foto de galería
+  const handleGalleryDelete = async (itemId) => {
+    if (!window.confirm('¿Eliminar esta foto de la galería?')) return;
+    try {
+      await api.delete(`/api/v1/gallery/${itemId}`);
+      setGalleryItems(galleryItems.filter(item => item.id !== itemId));
+    } catch (error) {
+      console.error('Error eliminando de galería:', error);
+    }
+  };
+
   if (loading) return <Spinner />;
 
   return (
@@ -307,6 +362,16 @@ function Dashboard() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                       </svg>
                       QR
+                    </button>
+
+                    <button
+                      onClick={() => openGalleryModal(mem)}
+                      className="flex-1 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-1 text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Galería
                     </button>
                     
                     <button
@@ -551,6 +616,107 @@ function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Galería */}
+      {showGalleryModal && selectedMemorial && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">📸 Galería de {selectedMemorial.name}</h2>
+                <button
+                  onClick={() => setShowGalleryModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {/* Botón subir */}
+              <div className="mb-6">
+                <label className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg cursor-pointer hover:shadow-lg transition-all">
+                  {uploadingGallery ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Subiendo...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Agregar foto o video
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleGalleryUpload}
+                    className="hidden"
+                    disabled={uploadingGallery}
+                  />
+                </label>
+                <p className="text-sm text-gray-500 mt-2">Máximo 50 archivos, 10MB cada uno. Formatos: JPG, PNG, WebP, GIF, MP4, WebM</p>
+              </div>
+
+              {/* Grid de fotos */}
+              {galleryLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+                </div>
+              ) : galleryItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="mx-auto h-20 w-20 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <svg className="h-10 w-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-600">No hay fotos en la galería</p>
+                  <p className="text-gray-400 text-sm mt-1">Sube la primera foto para empezar</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {galleryItems.map((item) => (
+                    <div key={item.id} className="relative group aspect-square rounded-xl overflow-hidden bg-gray-100">
+                      {item.media_type === 'video' ? (
+                        <video src={item.filename} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={item.filename} alt={item.title || 'Foto'} className="w-full h-full object-cover" />
+                      )}
+                      
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          onClick={() => handleGalleryDelete(item.id)}
+                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      {/* Badge de video */}
+                      {item.media_type === 'video' && (
+                        <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+                          🎬 Video
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
