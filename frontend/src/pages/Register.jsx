@@ -65,7 +65,7 @@ function Register() {
 
     try {
       // Enviar datos de registro al backend
-      await api.post('/users/', {
+      await api.post('/api/v1/auth/register', {
         email: email,
         password: password
       });

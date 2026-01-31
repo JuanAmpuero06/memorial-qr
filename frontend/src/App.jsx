@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link, useLocation } from 'react-router-dom';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import PublicMemorial from './pages/PublicMemorial.jsx';
+import Analytics from './pages/Analytics.jsx';
 
 // Componente "Protegido" (Panel de Admin)
 function AdminLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,6 +32,8 @@ function AdminLayout() {
     return <Navigate to="/login" />;
   }
 
+  const isAnalyticsPage = location.pathname === '/analytics';
+
   return (
     <div className="font-sans bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
       <nav className="px-6 py-4 bg-white shadow-md border-b border-gray-200">
@@ -45,19 +49,52 @@ function AdminLayout() {
             </span>
           </Link>
           
-          <button 
-            onClick={handleLogout} 
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 font-medium"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Cerrar Sesión
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Navegación */}
+            <Link 
+              to="/" 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+                !isAnalyticsPage 
+                  ? 'bg-indigo-100 text-indigo-700' 
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              Memoriales
+            </Link>
+            
+            <Link 
+              to="/analytics" 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+                isAnalyticsPage 
+                  ? 'bg-indigo-100 text-indigo-700' 
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Analíticas
+            </Link>
+
+            <div className="w-px h-6 bg-gray-300"></div>
+            
+            <button 
+              onClick={handleLogout} 
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 font-medium"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       </nav>
 
-      <Dashboard />
+      {isAnalyticsPage ? <Analytics /> : <Dashboard />}
     </div>
   );
 }
@@ -75,8 +112,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Ruta Privada: El panel de administración */}
+        {/* Rutas Privadas: El panel de administración */}
         <Route path="/" element={<AdminLayout />} />
+        <Route path="/analytics" element={<AdminLayout />} />
         
         {/* Cualquier otra cosa redirige al admin */}
         <Route path="*" element={<Navigate to="/" />} />

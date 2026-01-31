@@ -13,8 +13,8 @@ from typing import List
 from app.config import settings
 from app.db import Base, engine, get_db
 from app.api.v1 import api_router
-from app.models import User
-from app.schemas import MemorialCreate, MemorialResponse, PublicMemorial
+from app.models import User, Memorial, Visit, Reaction
+from app.schemas import MemorialCreate, MemorialResponse, MemorialUpdate, PublicMemorial
 from app.api.deps import get_current_user
 from app.services import MemorialService, QRService
 
@@ -83,13 +83,16 @@ async def health_check():
 
 
 # ===== Endpoints legacy (compatibilidad con frontend actual) =====
-from app.api.v1.endpoints import auth, users
+from app.api.v1.endpoints import auth, users, analytics
 
 # Rutas de autenticación sin prefijo para compatibilidad
 app.include_router(auth.router, tags=["auth (legacy)"])
 
 # Rutas de usuarios con prefijo
 app.include_router(users.router, prefix="/users", tags=["users (legacy)"])
+
+# Rutas de analytics sin prefijo para compatibilidad
+app.include_router(analytics.router, prefix="/analytics", tags=["analytics (legacy)"])
 
 # Rutas de memorials - manteniendo compatibilidad con frontend
 @app.post("/memorials/", response_model=MemorialResponse, status_code=201, tags=["memorials (legacy)"])
@@ -132,4 +135,25 @@ async def upload_photo_legacy(
 ):
     """Subir foto (endpoint legacy)"""
     return await MemorialService.upload_photo(db, memorial_id, file, current_user)
+
+
+@app.put("/memorials/{memorial_id}", response_model=MemorialResponse, tags=["memorials (legacy)"])
+async def update_memorial_legacy(
+    memorial_id: int,
+    memorial_data: MemorialUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar memorial (endpoint legacy)"""
+    return MemorialService.update_memorial(db, memorial_id, memorial_data, current_user)
+
+
+@app.delete("/memorials/{memorial_id}", tags=["memorials (legacy)"])
+async def delete_memorial_legacy(
+    memorial_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Eliminar memorial (endpoint legacy)"""
+    return MemorialService.delete_memorial(db, memorial_id, current_user)
 

@@ -17,9 +17,13 @@ class Memorial(Base):
     name = Column(String, index=True)
     epitaph = Column(String, nullable=True)
     bio = Column(String, nullable=True)
+    birth_date = Column(String, nullable=True)
+    death_date = Column(String, nullable=True)
     image_filename = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relaciones
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     owner = relationship("User", back_populates="memorials")
+    visits = relationship("Visit", back_populates="memorial", cascade="all, delete-orphan")
+    reactions = relationship("Reaction", back_populates="memorial", cascade="all, delete-orphan")

@@ -53,6 +53,8 @@ class PublicMemorial(BaseModel):
     name: str
     epitaph: Optional[str] = None
     bio: Optional[str] = None
+    birth_date: Optional[str] = None
+    death_date: Optional[str] = None
     image_filename: Optional[str] = None
     
     @field_serializer('image_filename')

@@ -39,6 +39,8 @@ class MemorialRepository:
             name=memorial.name,
             epitaph=memorial.epitaph,
             bio=memorial.bio,
+            birth_date=memorial.birth_date,
+            death_date=memorial.death_date,
             slug=final_slug,
             owner_id=user_id
         )

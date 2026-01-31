@@ -4,17 +4,40 @@ import api from '../api';
 import Spinner from '../components/common/Spinner.jsx';
 import ErrorMessage from '../components/common/ErrorMessage.jsx';
 
+// Generar o recuperar visitor ID único
+const getVisitorId = () => {
+  let visitorId = localStorage.getItem('visitor_id');
+  if (!visitorId) {
+    visitorId = 'v_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    localStorage.setItem('visitor_id', visitorId);
+  }
+  return visitorId;
+};
+
 function PublicMemorial() {
   const { slug } = useParams();
   const [memorial, setMemorial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reactions, setReactions] = useState({
+    counts: { candle: 0, flower: 0, heart: 0, pray: 0, dove: 0 },
+    user_reactions: []
+  });
+  const [reactingType, setReactingType] = useState(null);
+  const visitorId = getVisitorId();
 
   useEffect(() => {
     const fetchPublicData = async () => {
       try {
         const response = await api.get(`/public/memorials/${slug}`);
         setMemorial(response.data);
+        
+        // Registrar visita
+        api.post(`/analytics/visit/${slug}`).catch(() => {});
+        
+        // Obtener reacciones
+        const reactionsRes = await api.get(`/analytics/reactions/${slug}?visitor_id=${visitorId}`);
+        setReactions(reactionsRes.data);
       } catch (err) {
         console.error("Error cargando memorial:", err);
         setError(true);
@@ -24,7 +47,34 @@ function PublicMemorial() {
     };
 
     fetchPublicData();
-  }, [slug]);
+  }, [slug, visitorId]);
+
+  const handleReaction = async (reactionType) => {
+    setReactingType(reactionType);
+    try {
+      const response = await api.post(`/analytics/reactions/${slug}`, {
+        reaction_type: reactionType,
+        visitor_id: visitorId
+      });
+      
+      setReactions({
+        counts: response.data.counts,
+        user_reactions: response.data.user_reactions
+      });
+    } catch (err) {
+      console.error("Error al reaccionar:", err);
+    } finally {
+      setReactingType(null);
+    }
+  };
+
+  const reactionTypes = [
+    { type: 'candle', icon: '🕯️', label: 'Encender vela', activeLabel: 'Vela encendida' },
+    { type: 'flower', icon: '🌸', label: 'Dejar flores', activeLabel: 'Flores dejadas' },
+    { type: 'heart', icon: '❤️', label: 'Enviar amor', activeLabel: 'Amor enviado' },
+    { type: 'pray', icon: '🙏', label: 'Oración', activeLabel: 'En oración' },
+    { type: 'dove', icon: '🕊️', label: 'Paz', activeLabel: 'Paz enviada' }
+  ];
 
   if (loading) return <Spinner />;
   if (error) return <ErrorMessage message="Memorial no encontrado." />;
@@ -76,13 +126,29 @@ function PublicMemorial() {
               {memorial.name}
             </h1>
 
-            {/* Fechas */}
+            {/* Fechas y edad */}
             {(memorial.birth_date || memorial.death_date) && (
-              <p className="text-amber-400/80 text-sm font-medium tracking-wider mb-4">
-                {memorial.birth_date && new Date(memorial.birth_date).getFullYear()}
-                {memorial.birth_date && memorial.death_date && ' — '}
-                {memorial.death_date && new Date(memorial.death_date).getFullYear()}
-              </p>
+              <div className="text-amber-400/80 text-sm font-medium tracking-wider mb-4">
+                <p>
+                  {memorial.birth_date && new Date(memorial.birth_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {memorial.birth_date && memorial.death_date && ' — '}
+                  {memorial.death_date && new Date(memorial.death_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+                {memorial.birth_date && memorial.death_date && (
+                  <p className="text-amber-300/60 text-xs mt-1">
+                    {(() => {
+                      const birth = new Date(memorial.birth_date);
+                      const death = new Date(memorial.death_date);
+                      let age = death.getFullYear() - birth.getFullYear();
+                      const monthDiff = death.getMonth() - birth.getMonth();
+                      if (monthDiff < 0 || (monthDiff === 0 && death.getDate() < birth.getDate())) {
+                        age--;
+                      }
+                      return `${age} años`;
+                    })()}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Decorador */}
@@ -127,6 +193,58 @@ function PublicMemorial() {
             <p className="mt-8 text-slate-500 text-sm">
               Encendemos esta vela en su memoria
             </p>
+          </div>
+
+          {/* Sección de Reacciones */}
+          <div className="px-8 pb-8">
+            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/30">
+              <h3 className="text-amber-400/80 text-sm font-medium text-center mb-4 uppercase tracking-wider">
+                Deja tu homenaje
+              </h3>
+              
+              <div className="flex justify-center gap-2 flex-wrap">
+                {reactionTypes.map((reaction) => {
+                  const isActive = reactions.user_reactions.includes(reaction.type);
+                  const count = reactions.counts[reaction.type] || 0;
+                  const isLoading = reactingType === reaction.type;
+                  
+                  return (
+                    <button
+                      key={reaction.type}
+                      onClick={() => handleReaction(reaction.type)}
+                      disabled={isLoading}
+                      className={`
+                        relative flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all duration-300 transform
+                        ${isActive 
+                          ? 'bg-gradient-to-br from-amber-500/30 to-amber-600/20 border-amber-500/50 scale-105 shadow-lg shadow-amber-500/20' 
+                          : 'bg-slate-700/30 border-slate-600/30 hover:bg-slate-700/50 hover:scale-105'
+                        }
+                        border disabled:opacity-50
+                      `}
+                    >
+                      <span className={`text-2xl transition-transform ${isLoading ? 'animate-bounce' : ''} ${isActive ? 'animate-pulse' : ''}`}>
+                        {reaction.icon}
+                      </span>
+                      <span className={`text-xs font-medium ${isActive ? 'text-amber-400' : 'text-slate-400'}`}>
+                        {count > 0 ? count : ''}
+                      </span>
+                      
+                      {/* Tooltip */}
+                      <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        {isActive ? reaction.activeLabel : reaction.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Total de reacciones */}
+              {Object.values(reactions.counts).reduce((a, b) => a + b, 0) > 0 && (
+                <p className="text-center text-slate-500 text-xs mt-4">
+                  {Object.values(reactions.counts).reduce((a, b) => a + b, 0)} personas han dejado su homenaje
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
