@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Mock de import.meta.env para tests
+vi.stubEnv('VITE_API_URL', 'http://localhost');
 
 // Mock de localStorage
 const localStorageMock = {

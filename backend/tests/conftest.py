@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.db import Base, get_db
-from app.models import User, Memorial
+from app.models import User, Memorial, Condolence, Visit, TimelineEvent
 from app.core.security import get_password_hash
 from app.services import AuthService
 
@@ -135,3 +135,56 @@ def multiple_memorials(db: Session, test_user: User) -> list:
     for m in memorials:
         db.refresh(m)
     return memorials
+
+
+@pytest.fixture
+def test_condolence(db: Session, test_memorial: Memorial) -> Condolence:
+    """
+    Crear condolencia de prueba
+    """
+    condolence = Condolence(
+        memorial_id=test_memorial.id,
+        author_name="María García",
+        message="Siempre te recordaremos con cariño",
+        is_approved=True,
+        is_featured=False
+    )
+    db.add(condolence)
+    db.commit()
+    db.refresh(condolence)
+    return condolence
+
+
+@pytest.fixture
+def test_visit(db: Session, test_memorial: Memorial) -> Visit:
+    """
+    Crear visita de prueba
+    """
+    visit = Visit(
+        memorial_id=test_memorial.id,
+        ip_address="127.0.0.1",
+        user_agent="TestBrowser"
+    )
+    db.add(visit)
+    db.commit()
+    db.refresh(visit)
+    return visit
+
+
+@pytest.fixture
+def test_timeline_event(db: Session, test_memorial: Memorial) -> TimelineEvent:
+    """
+    Crear evento de timeline de prueba
+    """
+    event = TimelineEvent(
+        memorial_id=test_memorial.id,
+        title="Nacimiento",
+        description="Nació en Madrid",
+        event_date="1950-03-15",
+        event_type="birth",
+        display_order=1
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event

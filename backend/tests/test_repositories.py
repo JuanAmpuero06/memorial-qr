@@ -4,8 +4,8 @@ Tests para repositorios
 import pytest
 from sqlalchemy.orm import Session
 
-from app.repositories import UserRepository, MemorialRepository
-from app.schemas import UserCreate, MemorialCreate
+from app.repositories import UserRepository, MemorialRepository, CondolenceRepository, VisitRepository
+from app.schemas import UserCreate, MemorialCreate, CondolenceCreate
 from app.models import User, Memorial
 
 
@@ -156,3 +156,108 @@ class TestMemorialRepository:
         
         found = MemorialRepository.get_by_id(db, memorial_id)
         assert found is None
+    
+    @pytest.mark.unit
+    def test_create_memorial_unique_slug(self, db: Session, test_user: User):
+        """Test que se generan slugs únicos"""
+        memorial_data = MemorialCreate(
+            name="María García",
+            epitaph="Test",
+            birth_date="1945-01-01",
+            death_date="2023-01-01"
+        )
+        
+        memorial1 = MemorialRepository.create(db, memorial_data, test_user.id)
+        memorial2 = MemorialRepository.create(db, memorial_data, test_user.id)
+        
+        assert memorial1.slug != memorial2.slug
+
+
+class TestCondolenceRepository:
+    """Tests para CondolenceRepository"""
+    
+    @pytest.mark.unit
+    def test_create_condolence(self, db: Session, test_memorial: Memorial):
+        """Test crear condolencia"""
+        condolence_data = CondolenceCreate(
+            author_name="María García",
+            message="Siempre te recordaremos"
+        )
+        condolence = CondolenceRepository.create(
+            db, test_memorial.id, condolence_data, "127.0.0.1"
+        )
+        
+        assert condolence.id is not None
+        assert condolence.author_name == "María García"
+        assert condolence.memorial_id == test_memorial.id
+    
+    @pytest.mark.unit
+    def test_get_by_memorial(self, db: Session, test_memorial: Memorial):
+        """Test obtener condolencias por memorial"""
+        # Crear condolencias
+        for i in range(3):
+            condolence_data = CondolenceCreate(
+                author_name=f"Autor {i}",
+                message=f"Mensaje {i}"
+            )
+            CondolenceRepository.create(db, test_memorial.id, condolence_data)
+        
+        condolences, total = CondolenceRepository.get_by_memorial(db, test_memorial.id)
+        
+        assert total >= 3
+        assert len(condolences) >= 3
+    
+    @pytest.mark.unit
+    def test_get_by_memorial_with_pagination(self, db: Session, test_memorial: Memorial):
+        """Test paginación de condolencias"""
+        # Crear 5 condolencias
+        for i in range(5):
+            condolence_data = CondolenceCreate(
+                author_name=f"Autor {i}",
+                message=f"Mensaje {i}"
+            )
+            CondolenceRepository.create(db, test_memorial.id, condolence_data)
+        
+        condolences, total = CondolenceRepository.get_by_memorial(
+            db, test_memorial.id, limit=2, offset=0
+        )
+        
+        assert total >= 5
+        assert len(condolences) == 2
+
+
+class TestVisitRepository:
+    """Tests para VisitRepository"""
+    
+    @pytest.mark.unit
+    def test_create_visit(self, db: Session, test_memorial: Memorial):
+        """Test crear visita"""
+        visit = VisitRepository.create(
+            db, test_memorial.id, "127.0.0.1", "TestBrowser", "/memorial"
+        )
+        
+        assert visit.id is not None
+        assert visit.memorial_id == test_memorial.id
+        assert visit.ip_address == "127.0.0.1"
+    
+    @pytest.mark.unit
+    def test_get_total_count(self, db: Session, test_memorial: Memorial):
+        """Test contar visitas totales"""
+        # Crear visitas
+        for _ in range(3):
+            VisitRepository.create(db, test_memorial.id)
+        
+        count = VisitRepository.get_total_count(db, test_memorial.id)
+        
+        assert count >= 3
+    
+    @pytest.mark.unit
+    def test_get_today_count(self, db: Session, test_memorial: Memorial):
+        """Test contar visitas de hoy"""
+        # Crear visitas
+        for _ in range(2):
+            VisitRepository.create(db, test_memorial.id)
+        
+        count = VisitRepository.get_today_count(db, test_memorial.id)
+        
+        assert count >= 2
