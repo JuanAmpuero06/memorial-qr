@@ -3,6 +3,10 @@ import { useParams } from 'react-router-dom';
 import api from '../api';
 import Spinner from '../components/common/Spinner.jsx';
 import ErrorMessage from '../components/common/ErrorMessage.jsx';
+import AnimatedCandle from '../components/memorial/AnimatedCandle.jsx';
+import Timeline from '../components/memorial/Timeline.jsx';
+import PhotoGallery from '../components/memorial/PhotoGallery.jsx';
+import Condolences from '../components/memorial/Condolences.jsx';
 
 // Generar o recuperar visitor ID único
 const getVisitorId = () => {
@@ -179,20 +183,13 @@ function PublicMemorial() {
               </div>
             )}
 
-            {/* Vela animada */}
-            <div className="mt-10 flex justify-center">
-              <div className="relative group cursor-pointer">
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-3 h-6 bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 rounded-full blur-sm animate-flicker"></div>
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-2 h-5 bg-gradient-to-t from-amber-400 to-yellow-200 rounded-full animate-flicker"></div>
-                <div className="w-8 h-16 bg-gradient-to-b from-amber-100 to-amber-200 rounded-lg shadow-lg"></div>
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-10 h-2 bg-amber-800 rounded-full"></div>
-              </div>
+            {/* Vela animada mejorada */}
+            <div className="mt-10 flex flex-col items-center">
+              <AnimatedCandle isLit={true} size="large" />
+              <p className="mt-6 text-slate-500 text-sm">
+                Encendemos esta vela en su memoria
+              </p>
             </div>
-
-            {/* Mensaje de condolencia */}
-            <p className="mt-8 text-slate-500 text-sm">
-              Encendemos esta vela en su memoria
-            </p>
           </div>
 
           {/* Sección de Reacciones */}
@@ -246,6 +243,18 @@ function PublicMemorial() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Nuevas secciones: Galería, Timeline y Condolencias */}
+        <div className="px-4">
+          {/* Galería de Fotos */}
+          <PhotoGallery slug={slug} isOwner={false} />
+          
+          {/* Línea de Tiempo */}
+          <Timeline slug={slug} isOwner={false} />
+          
+          {/* Libro de Condolencias */}
+          <Condolences slug={slug} isOwner={false} />
         </div>
 
         {/* Footer */}

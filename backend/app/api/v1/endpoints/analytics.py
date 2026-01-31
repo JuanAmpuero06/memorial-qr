@@ -55,8 +55,8 @@ async def register_visit(
     # Obtener IP del cliente
     client_ip = request.client.host if request.client else None
     
-    # Registrar visita
-    AnalyticsService.register_visit(
+    # Registrar visita con geolocalización asíncrona
+    await AnalyticsService.register_visit_async(
         db, 
         memorial.id, 
         ip_address=client_ip,
@@ -65,6 +65,38 @@ async def register_visit(
     )
     
     return {"message": "Visita registrada", "memorial_id": memorial.id}
+
+
+@router.get("/locations/{slug}")
+async def get_location_stats(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener estadísticas de ubicación de visitantes
+    
+    Args:
+        slug: Slug del memorial
+        
+    Returns:
+        Estadísticas de ubicación
+    """
+    from app.repositories import VisitRepository
+    
+    memorial = MemorialRepository.get_by_slug(db, slug)
+    if not memorial:
+        return {"error": "Memorial no encontrado"}
+    
+    if memorial.owner_id != current_user.id:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver estas estadísticas"
+        )
+    
+    locations = VisitRepository.get_location_stats(db, memorial.id)
+    return {"memorial_id": memorial.id, "locations": locations}
 
 
 @router.get("/reactions/{slug}", response_model=MemorialReactions)

@@ -1,0 +1,70 @@
+name: Docker Compose CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  docker-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          POSTGRES_USER=memorial_user
+          POSTGRES_PASSWORD=memorial_password
+          POSTGRES_DB=memorial_qr
+          DATABASE_URL=postgresql://memorial_user:memorial_password@db:5432/memorial_qr
+          SECRET_KEY=ci-test-secret-key-not-for-production
+          ALGORITHM=HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES=30
+          BACKEND_URL=http://localhost:8000
+          FRONTEND_URL=http://localhost:5173
+          EOF
+
+      - name: Build and start services
+        run: |
+          docker compose build
+          docker compose up -d
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Check if backend is responding
+          for i in {1..10}; do
+            if curl -s http://localhost:8000/health > /dev/null; then
+              echo "Backend is healthy!"
+              break
+            fi
+            echo "Waiting for backend... attempt $i"
+            sleep 5
+          done
+
+      - name: Check service status
+        run: |
+          docker compose ps
+          docker compose logs --tail=50
+
+      - name: Test backend health endpoint
+        run: |
+          response=$(curl -s http://localhost:8000/health)
+          echo "Health check response: $response"
+          if echo "$response" | grep -q "status"; then
+            echo "✅ Backend health check passed"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v

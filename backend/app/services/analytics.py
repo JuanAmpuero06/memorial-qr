@@ -1,7 +1,7 @@
 """
 Servicio de Analytics - Lógica de negocio para visitas y reacciones
 """
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.repositories import MemorialRepository, VisitRepository, ReactionRepository
 from app.schemas import (
@@ -14,9 +14,32 @@ class AnalyticsService:
     """Servicio de gestión de analytics"""
     
     @staticmethod
+    async def register_visit_async(db: Session, memorial_id: int, ip_address: str = None,
+                                    user_agent: str = None, referrer: str = None):
+        """Registrar una nueva visita con geolocalización asíncrona"""
+        from app.services.geo import GeoService
+        
+        # Obtener geolocalización
+        country = None
+        city = None
+        
+        if ip_address:
+            try:
+                location = await GeoService.get_location(ip_address)
+                country = location.country
+                city = location.city
+            except Exception as e:
+                print(f"Error en geolocalización: {e}")
+        
+        return VisitRepository.create(
+            db, memorial_id, ip_address, user_agent, referrer,
+            country=country, city=city
+        )
+    
+    @staticmethod
     def register_visit(db: Session, memorial_id: int, ip_address: str = None,
                        user_agent: str = None, referrer: str = None):
-        """Registrar una nueva visita"""
+        """Registrar una nueva visita (versión síncrona sin geo)"""
         return VisitRepository.create(db, memorial_id, ip_address, user_agent, referrer)
     
     @staticmethod

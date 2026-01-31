@@ -12,6 +12,8 @@ python-jose[cryptography]
 python-multipart
 qrcode[pil]
 python-slugify
+Pillow
+httpx
 
 # Testing
 pytest==8.3.4

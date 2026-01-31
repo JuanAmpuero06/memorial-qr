@@ -27,3 +27,6 @@ class Memorial(Base):
     owner = relationship("User", back_populates="memorials")
     visits = relationship("Visit", back_populates="memorial", cascade="all, delete-orphan")
     reactions = relationship("Reaction", back_populates="memorial", cascade="all, delete-orphan")
+    condolences = relationship("Condolence", back_populates="memorial", cascade="all, delete-orphan")
+    timeline_events = relationship("TimelineEvent", back_populates="memorial", cascade="all, delete-orphan")
+    media_items = relationship("MediaItem", back_populates="memorial", cascade="all, delete-orphan")

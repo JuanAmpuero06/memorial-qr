@@ -2,15 +2,33 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import Spinner from '../components/common/Spinner.jsx';
+import VisitorMap from '../components/analytics/VisitorMap.jsx';
 
 function Analytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMemorial, setSelectedMemorial] = useState(null);
+  const [locationStats, setLocationStats] = useState([]);
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  useEffect(() => {
+    if (selectedMemorial) {
+      fetchLocationStats(selectedMemorial.memorial_slug);
+    }
+  }, [selectedMemorial]);
+
+  const fetchLocationStats = async (slug) => {
+    try {
+      const response = await api.get(`/analytics/locations/${slug}`);
+      setLocationStats(response.data.locations || []);
+    } catch (error) {
+      console.error('Error cargando ubicaciones:', error);
+      setLocationStats([]);
+    }
+  };
 
   const fetchAnalytics = async () => {
     try {
@@ -266,6 +284,9 @@ function Analytics() {
                     ))}
                   </div>
                 </div>
+
+                {/* Mapa de Visitantes */}
+                <VisitorMap locations={locationStats} />
               </div>
             )}
           </div>

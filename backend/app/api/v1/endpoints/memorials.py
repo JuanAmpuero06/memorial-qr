@@ -73,6 +73,8 @@ async def get_public_memorial(
 @router.get("/{slug}/qr")
 async def get_qr_code(
     slug: str,
+    with_photo: bool = False,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -80,12 +82,37 @@ async def get_qr_code(
     
     Args:
         slug: Slug del memorial
+        with_photo: Si incluir la foto del fallecido en el QR
         current_user: Usuario autenticado
         
     Returns:
-        Imagen QR
+        Imagen QR (simple o con foto integrada)
     """
-    return QRService.generate_qr(slug)
+    from app.repositories import MemorialRepository
+    
+    # Obtener el memorial para verificar si tiene foto
+    memorial = MemorialRepository.get_by_slug(db, slug)
+    image_filename = memorial.image_filename if memorial else None
+    
+    return QRService.generate_qr(slug, with_photo=with_photo, image_filename=image_filename)
+
+
+@router.get("/{slug}/qr-simple")
+async def get_qr_code_simple(
+    slug: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generar código QR simple sin decoraciones
+    
+    Args:
+        slug: Slug del memorial
+        current_user: Usuario autenticado
+        
+    Returns:
+        Imagen QR simple
+    """
+    return QRService.generate_qr_simple(slug)
 
 
 @router.post("/{memorial_id}/upload-photo", response_model=MemorialResponse)

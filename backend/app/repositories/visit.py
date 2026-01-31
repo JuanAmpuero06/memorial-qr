@@ -13,13 +13,16 @@ class VisitRepository:
     
     @staticmethod
     def create(db: Session, memorial_id: int, ip_address: str = None, 
-               user_agent: str = None, referrer: str = None) -> Visit:
+               user_agent: str = None, referrer: str = None,
+               country: str = None, city: str = None) -> Visit:
         """Crear nueva visita"""
         db_visit = Visit(
             memorial_id=memorial_id,
             ip_address=ip_address,
             user_agent=user_agent,
-            referrer=referrer
+            referrer=referrer,
+            country=country,
+            city=city
         )
         db.add(db_visit)
         db.commit()
@@ -88,3 +91,45 @@ class VisitRepository:
         if not memorial_ids:
             return 0
         return db.query(Visit).filter(Visit.memorial_id.in_(memorial_ids)).count()
+    
+    @staticmethod
+    def get_location_stats(db: Session, memorial_id: int) -> List[dict]:
+        """Obtener estadísticas de ubicación de visitantes"""
+        results = db.query(
+            Visit.country,
+            Visit.city,
+            func.count(Visit.id).label('count')
+        ).filter(
+            Visit.memorial_id == memorial_id,
+            Visit.country.isnot(None)
+        ).group_by(
+            Visit.country,
+            Visit.city
+        ).order_by(
+            func.count(Visit.id).desc()
+        ).limit(20).all()
+        
+        return [
+            {"country": r.country, "city": r.city, "count": r.count} 
+            for r in results
+        ]
+    
+    @staticmethod
+    def get_country_stats(db: Session, memorial_ids: List[int]) -> List[dict]:
+        """Obtener estadísticas por país para múltiples memoriales"""
+        if not memorial_ids:
+            return []
+        
+        results = db.query(
+            Visit.country,
+            func.count(Visit.id).label('count')
+        ).filter(
+            Visit.memorial_id.in_(memorial_ids),
+            Visit.country.isnot(None)
+        ).group_by(
+            Visit.country
+        ).order_by(
+            func.count(Visit.id).desc()
+        ).limit(10).all()
+        
+        return [{"country": r.country, "count": r.count} for r in results]
