@@ -6,12 +6,14 @@
 
 **Memoriales digitales accesibles mediante códigos QR**
 
-[![Backend CI](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/backend.yml/badge.svg)](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/backend.yml)
-[![Frontend CI](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/frontend.yml/badge.svg)](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/frontend.yml)
-[![Docker](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/docker.yml/badge.svg)](https://github.com/JuanAmpuero06/memorial-qr/actions/workflows/docker.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-[Demo](#-demo) • [Características](#-características) • [Instalación](#-instalación) • [Documentación](#-documentación) • [Contribuir](#-contribuir)
+[Características](#-características) • [Instalación](#-instalación) • [API](#-api-endpoints) • [Arquitectura](#-arquitectura) • [Contribuir](#-contribuir)
 
 </div>
 
@@ -36,78 +38,87 @@
 
 | Característica | Descripción |
 |----------------|-------------|
-| 🪦 **Memoriales Digitales** | Crea tributos con foto, biografía, fechas y epitafio |
-| 📱 **Códigos QR Personalizados** | QR con foto integrada y diseño decorativo |
-| 🕯️ **Vela Virtual Animada** | Vela realista con animaciones de llama |
-| 💐 **Sistema de Reacciones** | Velas, flores, corazones, oraciones y palomas |
-| 📖 **Libro de Condolencias** | Visitantes pueden dejar mensajes (con moderación) |
-| 📅 **Línea de Tiempo** | Eventos importantes de la vida del fallecido |
-| 📸 **Galería Multimedia** | Múltiples fotos y videos por memorial |
-| 📊 **Analytics Avanzado** | Estadísticas de visitas y reacciones |
-| 🌍 **Geolocalización** | Mapa de visitantes por país y ciudad |
+| 🪦 **Memoriales Digitales** | Crea tributos personalizados con foto, biografía, fechas y epitafio |
+| 📱 **Códigos QR** | Genera QR únicos para cada memorial, listos para imprimir |
+| 🕯️ **Vela Virtual Animada** | Vela realista con animaciones CSS de llama parpadeante |
+| 💐 **Sistema de Reacciones** | 5 tipos: 🕯️ Velas, 🌸 Flores, ❤️ Corazones, 🙏 Oraciones, 🕊️ Palomas |
+| 📖 **Libro de Condolencias** | Visitantes dejan mensajes con sistema de moderación y destacados |
+| 📅 **Línea de Tiempo** | Eventos importantes: nacimiento, logros, matrimonio, etc. |
+| 📸 **Galería Multimedia** | Hasta 50 fotos/videos por memorial (10MB máx. cada uno) |
+| 📊 **Analytics Completo** | Estadísticas de visitas por día, semana, mes con gráficos |
+| 🌍 **Geolocalización** | Mapa de visitantes por país y ciudad (API ip-api.com) |
+| 🔒 **Rate Limiting** | Protección contra abuso con SlowAPI |
 
-### 🛠️ Características Técnicas
+### 🛠️ Stack Tecnológico
 
-- ✅ API REST completa con FastAPI
-- ✅ Autenticación JWT segura
-- ✅ Base de datos PostgreSQL
-- ✅ Frontend React moderno con Vite
-- ✅ Diseño responsive con TailwindCSS
-- ✅ Docker Compose para desarrollo
-- ✅ CI/CD con GitHub Actions
-- ✅ Tests automatizados (pytest + Vitest)
+**Backend:**
+- 🐍 Python 3.11+ con FastAPI
+- 🔐 Autenticación JWT (python-jose)
+- 🗄️ PostgreSQL + SQLAlchemy ORM
+- 📊 Pydantic para validación
+- 🧪 Pytest para testing
+- 🚦 SlowAPI para rate limiting
 
----
+**Frontend:**
+- ⚛️ React 18 con Hooks
+- ⚡ Vite como bundler
+- 🎨 TailwindCSS para estilos
+- 📡 Axios para API calls
+- 🧪 Vitest + Testing Library
 
-## 🖼️ Screenshots
-
-<div align="center">
-
-### Vista Pública del Memorial
-*Memorial con vela animada, reacciones y condolencias*
-
-### Dashboard de Administración
-*Gestión de memoriales con estadísticas en tiempo real*
-
-### Código QR Personalizado
-*QR con foto integrada y diseño decorativo*
-
-</div>
+**DevOps:**
+- 🐳 Docker & Docker Compose
+- 🔀 Traefik como reverse proxy
+- 📦 GitHub Actions para CI/CD
 
 ---
 
-## 🚀 Instalación
+## � Instalación
 
 ### Prerrequisitos
 
 - [Docker](https://docs.docker.com/get-docker/) y [Docker Compose](https://docs.docker.com/compose/install/)
-- O alternativamente: Python 3.11+, Node.js 20+, PostgreSQL 15+
+- O alternativamente: Python 3.11+, Node.js 18+, PostgreSQL 15+
 
 ### 🐳 Con Docker (Recomendado)
 
 ```bash
-# Clonar el repositorio
+# 1. Clonar el repositorio
 git clone https://github.com/JuanAmpuero06/memorial-qr.git
 cd memorial-qr
 
-# Crear archivo de configuración
+# 2. Crear archivo de configuración
 cp .env.example .env
-# Editar .env con tus valores
 
-# Levantar todos los servicios
+# 3. Configurar variables de entorno en .env
+DATABASE_URL=postgresql://postgres:password@db:5432/memorial_qr
+SECRET_KEY=tu-clave-secreta-super-segura
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:5173
+
+# 4. Levantar todos los servicios
 docker compose up -d
 
-# Ver logs
+# 5. Ver logs (opcional)
 docker compose logs -f
 ```
 
-**Servicios disponibles:**
-- 🌐 Frontend: http://localhost:5173
-- 🔧 Backend API: http://localhost:8000
-- 📚 Swagger Docs: http://localhost:8000/docs
-- 🗄️ pgAdmin: http://localhost:5050
+**🌐 Servicios disponibles (con Traefik):**
 
-### 💻 Desarrollo Local
+| Servicio | URL | Descripción |
+|----------|-----|-------------|
+| Frontend | http://localhost | Aplicación React |
+| Backend API | http://localhost/api | API FastAPI |
+| Swagger Docs | http://localhost/docs | Documentación interactiva |
+| ReDoc | http://localhost/redoc | Documentación alternativa |
+| Traefik Dashboard | http://localhost:8080 | Panel de Traefik |
+| pgAdmin | http://localhost:5050 | Administración PostgreSQL |
+
+> **Nota:** Traefik actúa como reverse proxy, todo el tráfico HTTP pasa por el puerto 80.
+
+### 💻 Desarrollo Local (Sin Docker)
 
 <details>
 <summary><b>Backend (Python/FastAPI)</b></summary>
@@ -126,6 +137,7 @@ pip install -r requirements.txt
 # Configurar variables de entorno
 export DATABASE_URL="postgresql://user:password@localhost:5432/memorial_qr"
 export SECRET_KEY="tu-clave-secreta"
+export BACKEND_URL="http://localhost:8000"
 
 # Ejecutar servidor
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -142,6 +154,9 @@ cd frontend
 # Instalar dependencias
 npm install
 
+# Configurar API URL (crear .env.local)
+echo "VITE_API_URL=http://localhost:8000" > .env.local
+
 # Ejecutar en desarrollo
 npm run dev
 
@@ -151,71 +166,103 @@ npm run build
 
 </details>
 
+> **Nota:** En desarrollo local sin Docker, el frontend usa puerto 5173 y el backend 8000.
+
 ---
 
-## 📚 Documentación
+## 📚 API Endpoints
 
-### 🔌 API Endpoints
-
-#### Autenticación
+### 🔐 Autenticación
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/v1/auth/login` | Iniciar sesión |
-| `POST` | `/api/v1/auth/register` | Registrar usuario |
+| `POST` | `/register` | Registrar nuevo usuario |
+| `POST` | `/login` | Iniciar sesión (retorna JWT) |
 
-#### Memoriales
+### 🪦 Memoriales
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/v1/memorials/` | Listar mis memoriales |
-| `POST` | `/api/v1/memorials/` | Crear memorial |
-| `GET` | `/api/v1/memorials/public/{slug}` | Ver memorial público |
-| `GET` | `/api/v1/memorials/{slug}/qr?with_photo=true` | Descargar QR con foto |
+| `GET` | `/memorials/` | Listar memoriales del usuario |
+| `POST` | `/memorials/` | Crear nuevo memorial |
+| `GET` | `/public/memorials/{slug}` | Ver memorial público |
+| `PUT` | `/memorials/{id}` | Actualizar memorial |
+| `DELETE` | `/memorials/{id}` | Eliminar memorial |
+| `POST` | `/memorials/{id}/upload-photo` | Subir foto principal |
+| `GET` | `/memorials/{slug}/qr` | Descargar código QR |
 
-#### Condolencias
+### 📖 Condolencias
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/v1/condolences/{slug}` | Obtener condolencias |
-| `POST` | `/api/v1/condolences/{slug}` | Enviar condolencia |
-| `PATCH` | `/api/v1/condolences/{id}` | Moderar (aprobar/destacar) |
+| `GET` | `/api/v1/condolences/public/{slug}` | Obtener condolencias aprobadas |
+| `POST` | `/api/v1/condolences/{slug}` | Enviar nueva condolencia |
+| `GET` | `/api/v1/condolences/pending/{slug}` | Ver pendientes (owner) |
+| `PATCH` | `/api/v1/condolences/{id}/moderate` | Aprobar/rechazar/destacar |
 
-#### Línea de Tiempo
+### 📅 Línea de Tiempo
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/v1/timeline/public/{slug}` | Ver timeline |
-| `POST` | `/api/v1/timeline/{memorial_id}` | Agregar evento |
+| `GET` | `/api/v1/timeline/public/{slug}` | Ver eventos públicos |
+| `POST` | `/api/v1/timeline/{memorial_id}` | Crear evento |
+| `PUT` | `/api/v1/timeline/{id}` | Actualizar evento |
+| `DELETE` | `/api/v1/timeline/{id}` | Eliminar evento |
 
-#### Galería
+### 📸 Galería Multimedia
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/v1/gallery/public/{slug}` | Ver galería |
+| `GET` | `/api/v1/gallery/public/{slug}` | Ver galería pública |
 | `POST` | `/api/v1/gallery/{memorial_id}` | Subir foto/video |
+| `PUT` | `/api/v1/gallery/{id}` | Actualizar metadatos |
+| `DELETE` | `/api/v1/gallery/{id}` | Eliminar archivo |
 
-> 📖 Documentación completa disponible en `/docs` (Swagger UI)
+### 📊 Analytics
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/analytics/dashboard` | Estadísticas generales |
+| `POST` | `/analytics/visit/{slug}` | Registrar visita |
+| `GET` | `/analytics/reactions/{slug}` | Obtener reacciones |
+| `POST` | `/analytics/reactions/{slug}` | Agregar reacción |
+| `GET` | `/api/v1/analytics/locations/{slug}` | Mapa de visitantes |
 
-### 🗄️ Modelos de Datos
+> 📖 Documentación interactiva completa en `http://localhost/docs` (Swagger UI)
+
+### 🗄️ Modelos de Base de Datos
 
 ```
-┌─────────────────┐       ┌──────────────────┐
-│      User       │       │    Memorial      │
-├─────────────────┤       ├──────────────────┤
-│ id              │──────<│ id               │
-│ email           │       │ slug             │
-│ hashed_password │       │ name, bio        │
-│ is_active       │       │ birth/death_date │
-└─────────────────┘       │ image_filename   │
-                          └────────┬─────────┘
-                                   │
-        ┌──────────────────────────┼──────────────────────────┐
-        │                          │                          │
-        ▼                          ▼                          ▼
-┌───────────────┐        ┌─────────────────┐        ┌─────────────────┐
-│   Condolence  │        │  TimelineEvent  │        │    MediaItem    │
-├───────────────┤        ├─────────────────┤        ├─────────────────┤
-│ author_name   │        │ title           │        │ filename        │
-│ message       │        │ event_date      │        │ media_type      │
-│ is_approved   │        │ event_type      │        │ caption         │
-│ is_featured   │        │ icon            │        │ is_featured     │
-└───────────────┘        └─────────────────┘        └─────────────────┘
+┌─────────────────┐         ┌──────────────────┐
+│      User       │         │    Memorial      │
+├─────────────────┤         ├──────────────────┤
+│ id              │────────<│ id               │
+│ email           │         │ owner_id (FK)    │
+│ hashed_password │         │ slug (unique)    │
+│ is_active       │         │ name             │
+│ created_at      │         │ epitaph, bio     │
+└─────────────────┘         │ birth/death_date │
+                            │ image_filename   │
+                            └────────┬─────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌───────────────┐          ┌─────────────────┐          ┌─────────────────┐
+│   Condolence  │          │  TimelineEvent  │          │    MediaItem    │
+├───────────────┤          ├─────────────────┤          ├─────────────────┤
+│ memorial_id   │          │ memorial_id     │          │ memorial_id     │
+│ author_name   │          │ title           │          │ filename        │
+│ author_email  │          │ description     │          │ media_type      │
+│ message       │          │ event_date      │          │ title, caption  │
+│ is_approved   │          │ event_type      │          │ is_featured     │
+│ is_featured   │          │ icon            │          │ file_size       │
+└───────────────┘          └─────────────────┘          └─────────────────┘
+
+┌───────────────┐          ┌─────────────────┐
+│    Visit      │          │    Reaction     │
+├───────────────┤          ├─────────────────┤
+│ memorial_id   │          │ memorial_id     │
+│ ip_address    │          │ visitor_id      │
+│ user_agent    │          │ reaction_type   │
+│ country       │          │ created_at      │
+│ city          │          └─────────────────┘
+│ visited_at    │
+└───────────────┘
 ```
 
 ---
@@ -223,80 +270,166 @@ npm run build
 ## 🧪 Testing
 
 ```bash
-# Backend tests
+# Backend tests con cobertura
 cd backend
-pytest tests/ -v --cov=app
+pip install pytest pytest-cov
+pytest tests/ -v --cov=app --cov-report=html
 
 # Frontend tests
 cd frontend
 npm run test
+
+# Tests en modo watch
+npm run test:watch
+```
+
+### Estructura de Tests
+
+```
+backend/tests/
+├── conftest.py          # Fixtures compartidos
+├── test_api.py          # Tests de endpoints
+├── test_services.py     # Tests de lógica de negocio
+└── test_repositories.py # Tests de acceso a datos
+
+frontend/src/
+├── components/**/*.test.jsx  # Tests de componentes
+└── pages/**/*.test.jsx       # Tests de páginas
 ```
 
 ---
 
 ## 🏗️ Arquitectura
 
+El proyecto sigue una **arquitectura en capas** con separación de responsabilidades:
+
 ```
 memorial-qr/
-├── backend/                 # API FastAPI
+├── backend/                    # 🐍 API FastAPI
 │   ├── app/
-│   │   ├── api/            # Endpoints REST
-│   │   ├── models/         # Modelos SQLAlchemy
-│   │   ├── schemas/        # Schemas Pydantic
-│   │   ├── services/       # Lógica de negocio
-│   │   └── repositories/   # Acceso a datos
-│   └── tests/              # Tests pytest
+│   │   ├── api/
+│   │   │   ├── deps.py        # Dependencias (auth, db)
+│   │   │   └── v1/
+│   │   │       └── endpoints/ # Controladores REST
+│   │   ├── core/              # Seguridad, rate limiting
+│   │   ├── models/            # Modelos SQLAlchemy (ORM)
+│   │   ├── schemas/           # Schemas Pydantic (validación)
+│   │   ├── services/          # Lógica de negocio
+│   │   ├── repositories/      # Acceso a datos (queries)
+│   │   ├── config.py          # Configuración centralizada
+│   │   └── main.py            # Punto de entrada
+│   ├── tests/                 # Tests pytest
+│   ├── uploaded_images/       # Archivos subidos
+│   └── requirements.txt
 │
-├── frontend/               # React + Vite
+├── frontend/                  # ⚛️ React + Vite
 │   ├── src/
-│   │   ├── components/     # Componentes reutilizables
-│   │   ├── pages/          # Páginas/rutas
-│   │   └── api/            # Cliente API
-│   └── tests/              # Tests Vitest
+│   │   ├── api/              # Cliente API (axios)
+│   │   ├── components/
+│   │   │   ├── common/       # Spinner, ErrorMessage
+│   │   │   ├── memorial/     # AnimatedCandle, PhotoGallery, etc.
+│   │   │   └── analytics/    # VisitorMap
+│   │   ├── pages/            # Login, Register, Dashboard, etc.
+│   │   └── styles/           # CSS global
+│   ├── public/
+│   └── package.json
 │
-├── .github/workflows/      # CI/CD GitHub Actions
-└── docker-compose.yml      # Orquestación Docker
+├── docker-compose.yml         # 🐳 Orquestación de servicios
+├── traefik.yml               # 🔀 Configuración reverse proxy
+└── .github/workflows/        # 🔄 CI/CD pipelines
 ```
+
+### Flujo de Datos
+
+```
+                         ┌─────────────────────────────────────┐
+                         │           TRAEFIK (:80)             │
+                         │         Reverse Proxy               │
+                         └──────────────┬──────────────────────┘
+                                        │
+                    ┌───────────────────┼───────────────────┐
+                    │                   │                   │
+                    ▼                   ▼                   ▼
+            ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+            │   Frontend    │   │    Backend    │   │   PostgreSQL  │
+            │  React/Vite   │   │    FastAPI    │   │      :5432    │
+            │    :5173      │   │     :8000     │   └───────────────┘
+            └───────────────┘   └───────┬───────┘           ▲
+                                        │                   │
+                                        └───────────────────┘
+                                         Service → Repository
+```
+
+**Rutas de Traefik:**
+- `localhost/` → Frontend (React)
+- `localhost/api/*` → Backend (FastAPI)  
+- `localhost/docs` → Swagger UI
+- `localhost/static/*` → Archivos estáticos
 
 ---
 
-## 🤝 Contribuir
+## 🔧 Variables de Entorno
 
-¡Las contribuciones son bienvenidas! Por favor:
+Crear archivo `.env` en la raíz del proyecto:
 
-1. Fork el repositorio
-2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -m 'Agrega nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+```env
+# Base de datos
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=tu_password_seguro
+POSTGRES_DB=memorial_qr
+DATABASE_URL=postgresql://postgres:tu_password_seguro@db:5432/memorial_qr
 
-### 📝 Guidelines
+# Seguridad JWT
+SECRET_KEY=tu-clave-secreta-super-segura-cambiar-en-produccion
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-- Seguir el estilo de código existente
-- Agregar tests para nuevas funcionalidades
-- Actualizar documentación si es necesario
-- Usar commits descriptivos en español
+# URLs (con Traefik todo pasa por puerto 80)
+BACKEND_URL=http://localhost
+FRONTEND_URL=http://localhost
+
+# pgAdmin
+PGADMIN_DEFAULT_EMAIL=admin@admin.com
+PGADMIN_DEFAULT_PASSWORD=admin
+```
+
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `DATABASE_URL` | URL de conexión PostgreSQL | ✅ |
+| `SECRET_KEY` | Clave secreta para JWT (mín. 32 caracteres) | ✅ |
+| `ALGORITHM` | Algoritmo JWT | ✅ |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Duración del token en minutos | ✅ |
+| `BACKEND_URL` | URL base del backend | ✅ |
+| `FRONTEND_URL` | URL base del frontend | ✅ |
+| `PGADMIN_DEFAULT_EMAIL` | Email para pgAdmin | Opcional |
+| `PGADMIN_DEFAULT_PASSWORD` | Password para pgAdmin | Opcional |
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT - ver [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
 
 ## 👤 Autor
 
+<div align="center">
+
 **Juan Ampuero**
 
-- GitHub: [@JuanAmpuero06](https://github.com/JuanAmpuero06)
+[![GitHub](https://img.shields.io/badge/GitHub-@JuanAmpuero06-181717?style=flat-square&logo=github)](https://github.com/JuanAmpuero06)
+
+</div>
 
 ---
 
 <div align="center">
 
-Hecho con ❤️ para preservar los recuerdos de quienes amamos
+### 🕯️ Hecho con ❤️ para preservar los recuerdos de quienes amamos
 
 **⭐ Si te gusta este proyecto, dale una estrella en GitHub ⭐**
+
+*Memorial QR - Donde los recuerdos perduran para siempre*
 
 </div>

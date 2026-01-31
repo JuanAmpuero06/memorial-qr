@@ -1,24 +1,87 @@
-# Logs
-logs
-*.log
+# ========================
+# NODE / NPM
+# ========================
+
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.npm
+.yarn-integrity
+.pnpm-store/
 
-node_modules
-dist
-dist-ssr
+# ========================
+# BUILD / DIST
+# ========================
+
+dist/
+dist-ssr/
+build/
 *.local
 
-# Editor directories and files
+# ========================
+# VARIABLES DE ENTORNO
+# ========================
+
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ========================
+# LOGS
+# ========================
+
+logs/
+*.log
+
+# ========================
+# EDITORES E IDEs
+# ========================
+
+# VSCode
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json.example
+
+# JetBrains
+.idea/
+
+# Vim
+*.swp
+*.swo
+*.sw?
+
+# Otros
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+
+# ========================
+# SISTEMA OPERATIVO
+# ========================
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ========================
+# TESTING
+# ========================
+
+coverage/
+.nyc_output/
+*.lcov
+
+# ========================
+# CACHE
+# ========================
+
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
