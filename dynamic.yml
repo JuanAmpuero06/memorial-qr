@@ -1,0 +1,59 @@
+# Configuración dinámica de Traefik
+http:
+  routers:
+    # Router para el Backend API
+    backend-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api`)"
+      entryPoints:
+        - web
+      service: backend
+      priority: 10
+
+    # Router para documentación
+    backend-docs:
+      rule: "Host(`localhost`) && PathPrefix(`/docs`)"
+      entryPoints:
+        - web
+      service: backend
+      priority: 10
+
+    # Router para redoc
+    backend-redoc:
+      rule: "Host(`localhost`) && PathPrefix(`/redoc`)"
+      entryPoints:
+        - web
+      service: backend
+      priority: 10
+
+    # Router para openapi.json
+    backend-openapi:
+      rule: "Host(`localhost`) && PathPrefix(`/openapi.json`)"
+      entryPoints:
+        - web
+      service: backend
+      priority: 10
+
+    # Router para el Frontend
+    frontend:
+      rule: "Host(`localhost`)"
+      entryPoints:
+        - web
+      service: frontend
+      priority: 1
+
+  services:
+    # Servicio Backend con Load Balancing
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://backend:8000"
+        healthCheck:
+          path: /docs
+          interval: "10s"
+          timeout: "3s"
+
+    # Servicio Frontend
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:5173"

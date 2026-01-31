@@ -1,6 +1,22 @@
-version: '3.8'
-
 services:
+  # --- BALANCEADOR DE CARGA / REVERSE PROXY ---
+  traefik:
+    image: traefik:v3.0
+    restart: always
+    ports:
+      - "80:80"       # HTTP
+      - "443:443"     # HTTPS
+      - "8080:8080"   # Dashboard de Traefik
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks:
+      - memorial-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
   # --- SERVICIO DE BASE DE DATOS ---
   db:
     image: postgres:15-alpine
@@ -11,41 +27,69 @@ services:
       - .env
     ports:
       - "5432:5432"
+    networks:
+      - memorial-network
 
   # --- SERVICIO DE BACKEND (API) ---
   backend:
     build: ./backend
+    restart: always
     volumes:
       - ./backend/app:/code/app  # ¡Hot Reload! Cambias código y se actualiza solo
       - ./backend/uploaded_images:/code/uploaded_images
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file:
       - .env
     depends_on:
       - db
+    networks:
+      - memorial-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`localhost`) && PathPrefix(`/api`, `/docs`, `/redoc`, `/openapi.json`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.backend-stripprefix.stripprefix.prefixes=/api"
 
   # --- SERVICIO DE ADMINISTRACIÓN (Visual) ---
   pgadmin:
     image: dpage/pgadmin4
+    restart: always
     env_file:
       - .env
     ports:
       - "5050:80"
     depends_on:
       - db
+    networks:
+      - memorial-network
 
-  # --- NUEVO SERVICIO: FRONTEND ---
+  # --- SERVICIO DE FRONTEND ---
   frontend:
     build: ./frontend
-    ports:
-      - "5173:5173"
+    restart: always
+    expose:
+      - "5173"
     volumes:
       - ./frontend:/app           # Hot Reload: Cambias código en Windows y se actualiza en Docker
       - /app/node_modules         # Truco: Usa los módulos de Linux dentro de Docker, no los de Windows
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost/api
     depends_on:
       - backend
+    networks:
+      - memorial-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5173"
+      - "traefik.http.routers.frontend.priority=1"
+
+networks:
+  memorial-network:
+    driver: bridge
+
 volumes:
   postgres_data:

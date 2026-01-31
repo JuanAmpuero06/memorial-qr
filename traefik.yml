@@ -1,0 +1,20 @@
+# Configuración estática de Traefik
+api:
+  dashboard: true
+  insecure: true  # Para desarrollo - en producción usar autenticación
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+log:
+  level: INFO
+
+accessLog: {}
