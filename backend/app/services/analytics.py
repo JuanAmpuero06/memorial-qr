@@ -2,6 +2,7 @@
 Servicio de Analytics - Lógica de negocio para visitas y reacciones
 """
 from typing import List, Optional
+from datetime import date
 from sqlalchemy.orm import Session
 from app.repositories import MemorialRepository, VisitRepository, ReactionRepository
 from app.schemas import (
@@ -70,21 +71,27 @@ class AnalyticsService:
         )
     
     @staticmethod
-    def get_dashboard_analytics(db: Session, user_id: int) -> DashboardAnalytics:
-        """Obtener analytics del dashboard para un usuario"""
+    def get_dashboard_analytics(db: Session, user_id: int, 
+                                start_date: date = None, end_date: date = None) -> DashboardAnalytics:
+        """Obtener analytics del dashboard para un usuario con filtros opcionales"""
         # Obtener memoriales del usuario
         memorials = MemorialRepository.get_by_user(db, user_id)
         memorial_ids = [m.id for m in memorials]
         
-        # Obtener totales
-        total_visits = VisitRepository.get_total_visits_for_user(db, memorial_ids)
-        total_reactions = ReactionRepository.get_total_reactions_for_user(db, memorial_ids)
+        # Obtener totales (con filtros si aplican)
+        total_visits = VisitRepository.get_total_visits_for_user(
+            db, memorial_ids, start_date=start_date, end_date=end_date
+        )
+        total_reactions = ReactionRepository.get_total_reactions_for_user(
+            db, memorial_ids, start_date=start_date, end_date=end_date
+        )
         
         # Obtener analytics por memorial
         memorials_analytics = []
         for memorial in memorials:
-            analytics = AnalyticsService.get_memorial_analytics(
-                db, memorial.id, memorial.name, memorial.slug
+            analytics = AnalyticsService.get_memorial_analytics_filtered(
+                db, memorial.id, memorial.name, memorial.slug,
+                start_date=start_date, end_date=end_date
             )
             memorials_analytics.append(analytics)
         
@@ -93,6 +100,42 @@ class AnalyticsService:
             total_visits=total_visits,
             total_reactions=total_reactions,
             memorials_analytics=memorials_analytics
+        )
+    
+    @staticmethod
+    def get_memorial_analytics_filtered(db: Session, memorial_id: int, memorial_name: str,
+                                        memorial_slug: str, start_date: date = None, 
+                                        end_date: date = None) -> MemorialAnalytics:
+        """Obtener analytics de un memorial con filtros de fecha"""
+        # Stats con filtros
+        stats = VisitStats(
+            total_visits=VisitRepository.get_count_filtered(db, memorial_id, start_date, end_date),
+            today_visits=VisitRepository.get_today_count(db, memorial_id),
+            week_visits=VisitRepository.get_week_count(db, memorial_id),
+            month_visits=VisitRepository.get_month_count(db, memorial_id)
+        )
+        
+        # Calcular días para el gráfico
+        if start_date and end_date:
+            days = (end_date - start_date).days + 1
+            days = min(days, 90)  # Máximo 90 días
+        else:
+            days = 30
+        
+        daily_visits = VisitRepository.get_daily_stats(
+            db, memorial_id, days=days, start_date=start_date, end_date=end_date
+        )
+        reactions_count = ReactionRepository.get_counts_by_memorial(
+            db, memorial_id, start_date=start_date, end_date=end_date
+        )
+        
+        return MemorialAnalytics(
+            memorial_id=memorial_id,
+            memorial_name=memorial_name,
+            memorial_slug=memorial_slug,
+            stats=stats,
+            daily_visits=[DailyVisitStat(**d) for d in daily_visits],
+            reactions_count=reactions_count
         )
     
     @staticmethod

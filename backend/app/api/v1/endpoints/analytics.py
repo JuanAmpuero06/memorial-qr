@@ -2,14 +2,15 @@
 Endpoints de Analytics - Visitas y Reacciones
 """
 from typing import Optional
-from fastapi import APIRouter, Depends, Request, Header
+from datetime import date, datetime, timedelta
+from fastapi import APIRouter, Depends, Request, Header, Query
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import User
 from app.schemas import DashboardAnalytics, MemorialReactions, ReactionCreate
 from app.services import AnalyticsService
 from app.api.deps import get_current_user
-from app.repositories import MemorialRepository
+from app.repositories import MemorialRepository, VisitRepository
 
 
 router = APIRouter()
@@ -18,15 +19,77 @@ router = APIRouter()
 @router.get("/dashboard", response_model=DashboardAnalytics)
 async def get_dashboard_analytics(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    start_date: Optional[date] = Query(None, description="Fecha inicio (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Fecha fin (YYYY-MM-DD)"),
+    period: Optional[str] = Query(None, description="Período: today, week, month, year, all")
 ):
     """
     Obtener analytics del dashboard para el usuario autenticado
     
+    Args:
+        start_date: Filtrar desde esta fecha
+        end_date: Filtrar hasta esta fecha
+        period: Período predefinido (today, week, month, year, all)
+        
     Returns:
         Analytics completo del dashboard
     """
-    return AnalyticsService.get_dashboard_analytics(db, current_user.id)
+    # Procesar período predefinido
+    if period:
+        today = date.today()
+        if period == "today":
+            start_date = today
+            end_date = today
+        elif period == "week":
+            start_date = today - timedelta(days=7)
+            end_date = today
+        elif period == "month":
+            start_date = today - timedelta(days=30)
+            end_date = today
+        elif period == "year":
+            start_date = today - timedelta(days=365)
+            end_date = today
+        # "all" = sin filtros
+    
+    return AnalyticsService.get_dashboard_analytics(
+        db, current_user.id, start_date=start_date, end_date=end_date
+    )
+
+
+@router.get("/filtered/{slug}")
+async def get_filtered_analytics(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    period: Optional[str] = Query(None)
+):
+    """
+    Obtener analytics filtrados para un memorial específico
+    """
+    memorial = MemorialRepository.get_by_slug(db, slug)
+    if not memorial or memorial.owner_id != current_user.id:
+        from fastapi import HTTPException, status
+        raise HTTPException(status_code=404, detail="Memorial no encontrado")
+    
+    # Procesar período
+    if period:
+        today = date.today()
+        periods = {
+            "today": (today, today),
+            "week": (today - timedelta(days=7), today),
+            "month": (today - timedelta(days=30), today),
+            "year": (today - timedelta(days=365), today),
+        }
+        if period in periods:
+            start_date, end_date = periods[period]
+    
+    return AnalyticsService.get_memorial_analytics_filtered(
+        db, memorial.id, memorial.name, memorial.slug,
+        start_date=start_date, end_date=end_date
+    )
 
 
 @router.post("/visit/{slug}")

@@ -2,7 +2,7 @@
 Repositorio de Visitas - Capa de acceso a datos
 """
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
 from app.models import Visit
@@ -67,17 +67,24 @@ class VisitRepository:
         ).count()
     
     @staticmethod
-    def get_daily_stats(db: Session, memorial_id: int, days: int = 30) -> List[dict]:
-        """Obtener estadísticas diarias de visitas"""
-        start_date = datetime.utcnow() - timedelta(days=days)
-        
-        results = db.query(
+    def get_daily_stats(db: Session, memorial_id: int, days: int = 30,
+                        start_date: date = None, end_date: date = None) -> List[dict]:
+        """Obtener estadísticas diarias de visitas con filtros opcionales"""
+        query = db.query(
             cast(Visit.visited_at, Date).label('date'),
             func.count(Visit.id).label('count')
-        ).filter(
-            Visit.memorial_id == memorial_id,
-            Visit.visited_at >= start_date
-        ).group_by(
+        ).filter(Visit.memorial_id == memorial_id)
+        
+        if start_date and end_date:
+            query = query.filter(
+                cast(Visit.visited_at, Date) >= start_date,
+                cast(Visit.visited_at, Date) <= end_date
+            )
+        else:
+            cutoff = datetime.utcnow() - timedelta(days=days)
+            query = query.filter(Visit.visited_at >= cutoff)
+        
+        results = query.group_by(
             cast(Visit.visited_at, Date)
         ).order_by(
             cast(Visit.visited_at, Date)
@@ -86,11 +93,33 @@ class VisitRepository:
         return [{"date": str(r.date), "count": r.count} for r in results]
     
     @staticmethod
-    def get_total_visits_for_user(db: Session, memorial_ids: List[int]) -> int:
-        """Obtener total de visitas para múltiples memoriales"""
+    def get_count_filtered(db: Session, memorial_id: int, 
+                          start_date: date = None, end_date: date = None) -> int:
+        """Obtener conteo de visitas con filtros de fecha"""
+        query = db.query(Visit).filter(Visit.memorial_id == memorial_id)
+        
+        if start_date:
+            query = query.filter(cast(Visit.visited_at, Date) >= start_date)
+        if end_date:
+            query = query.filter(cast(Visit.visited_at, Date) <= end_date)
+        
+        return query.count()
+    
+    @staticmethod
+    def get_total_visits_for_user(db: Session, memorial_ids: List[int],
+                                  start_date: date = None, end_date: date = None) -> int:
+        """Obtener total de visitas para múltiples memoriales con filtros"""
         if not memorial_ids:
             return 0
-        return db.query(Visit).filter(Visit.memorial_id.in_(memorial_ids)).count()
+        
+        query = db.query(Visit).filter(Visit.memorial_id.in_(memorial_ids))
+        
+        if start_date:
+            query = query.filter(cast(Visit.visited_at, Date) >= start_date)
+        if end_date:
+            query = query.filter(cast(Visit.visited_at, Date) <= end_date)
+        
+        return query.count()
     
     @staticmethod
     def get_location_stats(db: Session, memorial_id: int) -> List[dict]:

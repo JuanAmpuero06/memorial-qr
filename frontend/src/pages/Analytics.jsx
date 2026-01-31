@@ -9,10 +9,28 @@ function Analytics() {
   const [loading, setLoading] = useState(true);
   const [selectedMemorial, setSelectedMemorial] = useState(null);
   const [locationStats, setLocationStats] = useState([]);
+  
+  // Estados para filtros
+  const [filters, setFilters] = useState({
+    period: 'all',
+    startDate: '',
+    endDate: ''
+  });
+  const [showCustomDates, setShowCustomDates] = useState(false);
+
+  // Períodos predefinidos
+  const periods = [
+    { value: 'all', label: 'Todo', icon: '📊' },
+    { value: 'today', label: 'Hoy', icon: '📅' },
+    { value: 'week', label: '7 días', icon: '📆' },
+    { value: 'month', label: '30 días', icon: '🗓️' },
+    { value: 'year', label: '1 año', icon: '📈' },
+    { value: 'custom', label: 'Personalizado', icon: '⚙️' }
+  ];
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     if (selectedMemorial) {
@@ -32,16 +50,115 @@ function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await api.get('/analytics/dashboard');
+      setLoading(true);
+      
+      // Construir parámetros de query
+      const params = new URLSearchParams();
+      
+      if (filters.period === 'custom' && filters.startDate && filters.endDate) {
+        params.append('start_date', filters.startDate);
+        params.append('end_date', filters.endDate);
+      } else if (filters.period !== 'all') {
+        params.append('period', filters.period);
+      }
+      
+      const url = `/analytics/dashboard${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
       setAnalytics(response.data);
+      
       if (response.data.memorials_analytics.length > 0) {
-        setSelectedMemorial(response.data.memorials_analytics[0]);
+        // Mantener selección actual si existe, sino seleccionar el primero
+        const currentId = selectedMemorial?.memorial_id;
+        const found = response.data.memorials_analytics.find(m => m.memorial_id === currentId);
+        setSelectedMemorial(found || response.data.memorials_analytics[0]);
       }
     } catch (error) {
       console.error('Error cargando analytics:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePeriodChange = (period) => {
+    if (period === 'custom') {
+      setShowCustomDates(true);
+      setFilters(prev => ({ ...prev, period: 'custom' }));
+    } else {
+      setShowCustomDates(false);
+      setFilters({ period, startDate: '', endDate: '' });
+    }
+  };
+
+  const handleCustomDateApply = () => {
+    if (filters.startDate && filters.endDate) {
+      fetchAnalytics();
+    }
+  };
+
+  const getFilterDescription = () => {
+    if (filters.period === 'custom' && filters.startDate && filters.endDate) {
+      return `${filters.startDate} - ${filters.endDate}`;
+    }
+    const period = periods.find(p => p.value === filters.period);
+    return period?.label || 'Todo el tiempo';
+  };
+
+  // Función para generar datos completos del gráfico (rellena días sin datos con 0)
+  const getChartData = () => {
+    if (!selectedMemorial?.daily_visits) return [];
+    
+    const visits = selectedMemorial.daily_visits;
+    if (visits.length === 0) return [];
+    
+    // Determinar el rango de fechas según el filtro
+    let days = 30;
+    if (filters.period === 'today') days = 1;
+    else if (filters.period === 'week') days = 7;
+    else if (filters.period === 'month') days = 30;
+    else if (filters.period === 'year') days = 365;
+    else if (filters.period === 'custom' && filters.startDate && filters.endDate) {
+      const start = new Date(filters.startDate);
+      const end = new Date(filters.endDate);
+      days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    }
+    
+    // Para períodos muy largos, limitar las barras
+    const maxBars = Math.min(days, 60);
+    
+    // Crear mapa de visitas por fecha
+    const visitMap = {};
+    visits.forEach(v => { visitMap[v.date] = v.count; });
+    
+    // Generar array completo de días
+    const result = [];
+    const today = new Date();
+    
+    for (let i = maxBars - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      result.push({
+        date: dateStr,
+        count: visitMap[dateStr] || 0,
+        label: date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+      });
+    }
+    
+    return result;
+  };
+
+  const chartData = getChartData();
+  const maxVisits = chartData.length > 0 
+    ? Math.max(...chartData.map(d => d.count), 1)
+    : 1;
+
+  const getChartTitle = () => {
+    if (filters.period === 'today') return 'Visitas de hoy';
+    if (filters.period === 'week') return 'Visitas últimos 7 días';
+    if (filters.period === 'month') return 'Visitas últimos 30 días';
+    if (filters.period === 'year') return 'Visitas último año';
+    if (filters.period === 'custom') return `Visitas del período`;
+    return 'Visitas últimos 30 días';
   };
 
   const getReactionIcon = (type) => {
@@ -76,10 +193,6 @@ function Analytics() {
     );
   }
 
-  const maxVisits = selectedMemorial?.daily_visits?.length > 0 
-    ? Math.max(...selectedMemorial.daily_visits.map(d => d.count), 1)
-    : 1;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Header */}
@@ -103,6 +216,70 @@ function Analytics() {
               </svg>
               Volver al Dashboard
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de Filtros */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Filtros de Período */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 mr-2">📅 Período:</span>
+              {periods.map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => handlePeriodChange(period.value)}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    filters.period === period.value
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="mr-1">{period.icon}</span>
+                  {period.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Fechas Personalizadas */}
+            {showCustomDates && (
+              <div className="flex flex-wrap items-center gap-3 bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Desde:</label>
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Hasta:</label>
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <button
+                  onClick={handleCustomDateApply}
+                  disabled={!filters.startDate || !filters.endDate}
+                  className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  Aplicar
+                </button>
+              </div>
+            )}
+
+            {/* Indicador de Filtro Activo */}
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full">
+                🔍 {getFilterDescription()}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -234,32 +411,114 @@ function Analytics() {
                 <div className="bg-white rounded-2xl shadow-md p-6">
                   <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <span className="text-xl">📊</span>
-                    Visitas últimos 30 días
+                    {getChartTitle()}
                   </h3>
                   
-                  {selectedMemorial.daily_visits.length > 0 ? (
-                    <div className="h-48 flex items-end gap-1">
-                      {selectedMemorial.daily_visits.map((day, index) => {
-                        const height = (day.count / maxVisits) * 100;
-                        return (
-                          <div
-                            key={index}
-                            className="flex-1 group relative"
-                          >
-                            <div
-                              className="bg-gradient-to-t from-indigo-500 to-purple-500 rounded-t transition-all hover:from-indigo-600 hover:to-purple-600"
-                              style={{ height: `${Math.max(height, 4)}%` }}
-                            ></div>
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                              {day.date}: {day.count} visitas
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {chartData.length > 0 ? (
+                    <div className="space-y-2">
+                      {/* Gráfico de Líneas SVG */}
+                      <div className="relative h-48">
+                        <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+                          {/* Líneas de cuadrícula horizontales */}
+                          <line x1="0" y1="12.5" x2="100" y2="12.5" stroke="#e5e7eb" strokeWidth="0.2" />
+                          <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" strokeWidth="0.2" />
+                          <line x1="0" y1="37.5" x2="100" y2="37.5" stroke="#e5e7eb" strokeWidth="0.2" />
+                          
+                          {/* Área bajo la línea */}
+                          <defs>
+                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#818cf8" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.05" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d={`M 0,50 ${chartData.map((d, i) => {
+                              const x = (i / (chartData.length - 1)) * 100;
+                              const y = 50 - (d.count / maxVisits) * 45;
+                              return `L ${x},${y}`;
+                            }).join(' ')} L 100,50 Z`}
+                            fill="url(#areaGradient)"
+                          />
+                          
+                          {/* Línea principal */}
+                          <path
+                            d={chartData.map((d, i) => {
+                              const x = (i / (chartData.length - 1)) * 100;
+                              const y = 50 - (d.count / maxVisits) * 45;
+                              return `${i === 0 ? 'M' : 'L'} ${x},${y}`;
+                            }).join(' ')}
+                            fill="none"
+                            stroke="url(#lineGradient)"
+                            strokeWidth="0.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <defs>
+                            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#6366f1" />
+                              <stop offset="100%" stopColor="#a855f7" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        
+                        {/* Puntos interactivos */}
+                        <div className="absolute inset-0 flex items-end">
+                          {chartData.map((day, index) => {
+                            const left = (index / (chartData.length - 1)) * 100;
+                            const bottom = (day.count / maxVisits) * 90;
+                            return (
+                              <div
+                                key={index}
+                                className="absolute group"
+                                style={{ 
+                                  left: `${left}%`, 
+                                  bottom: `${Math.max(bottom, 5)}%`,
+                                  transform: 'translateX(-50%)'
+                                }}
+                              >
+                                {day.count > 0 && (
+                                  <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-white shadow-md hover:scale-150 transition-transform cursor-pointer" />
+                                )}
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                                  <div className="font-medium">{day.label}</div>
+                                  <div>{day.count} {day.count === 1 ? 'visita' : 'visitas'}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Eje Y - valores */}
+                        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-400 -ml-8 py-1">
+                          <span>{maxVisits}</span>
+                          <span>{Math.round(maxVisits / 2)}</span>
+                          <span>0</span>
+                        </div>
+                      </div>
+                      
+                      {/* Leyenda del eje X */}
+                      <div className="flex justify-between text-xs text-gray-400 px-1 ml-0">
+                        <span>{chartData[0]?.label}</span>
+                        <span>{chartData[Math.floor(chartData.length / 2)]?.label}</span>
+                        <span>{chartData[chartData.length - 1]?.label}</span>
+                      </div>
+                      
+                      {/* Resumen de datos */}
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                        <span className="text-gray-500">
+                          📈 Total en período: <span className="font-semibold text-indigo-600">{chartData.reduce((sum, d) => sum + d.count, 0)} visitas</span>
+                        </span>
+                        <span className="text-gray-400">
+                          Días con actividad: {chartData.filter(d => d.count > 0).length}/{chartData.length}
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <div className="h-48 flex items-center justify-center text-gray-400">
-                      Sin datos de visitas aún
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">📭</div>
+                        <p>Sin datos de visitas en este período</p>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -2,8 +2,9 @@
 Repositorio de Reacciones - Capa de acceso a datos
 """
 from typing import List, Optional, Dict
+from datetime import date
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, cast, Date
 from sqlalchemy.exc import IntegrityError
 from app.models import Reaction
 
@@ -44,16 +45,20 @@ class ReactionRepository:
         return False
     
     @staticmethod
-    def get_counts_by_memorial(db: Session, memorial_id: int) -> Dict[str, int]:
-        """Obtener conteo de reacciones por tipo para un memorial"""
-        results = db.query(
+    def get_counts_by_memorial(db: Session, memorial_id: int,
+                               start_date: date = None, end_date: date = None) -> Dict[str, int]:
+        """Obtener conteo de reacciones por tipo para un memorial con filtros"""
+        query = db.query(
             Reaction.reaction_type,
             func.count(Reaction.id).label('count')
-        ).filter(
-            Reaction.memorial_id == memorial_id
-        ).group_by(
-            Reaction.reaction_type
-        ).all()
+        ).filter(Reaction.memorial_id == memorial_id)
+        
+        if start_date:
+            query = query.filter(cast(Reaction.created_at, Date) >= start_date)
+        if end_date:
+            query = query.filter(cast(Reaction.created_at, Date) <= end_date)
+        
+        results = query.group_by(Reaction.reaction_type).all()
         
         counts = {
             'candle': 0,
@@ -85,11 +90,20 @@ class ReactionRepository:
         return db.query(Reaction).filter(Reaction.memorial_id == memorial_id).count()
     
     @staticmethod
-    def get_total_reactions_for_user(db: Session, memorial_ids: List[int]) -> int:
-        """Obtener total de reacciones para múltiples memoriales"""
+    def get_total_reactions_for_user(db: Session, memorial_ids: List[int],
+                                     start_date: date = None, end_date: date = None) -> int:
+        """Obtener total de reacciones para múltiples memoriales con filtros"""
         if not memorial_ids:
             return 0
-        return db.query(Reaction).filter(Reaction.memorial_id.in_(memorial_ids)).count()
+        
+        query = db.query(Reaction).filter(Reaction.memorial_id.in_(memorial_ids))
+        
+        if start_date:
+            query = query.filter(cast(Reaction.created_at, Date) >= start_date)
+        if end_date:
+            query = query.filter(cast(Reaction.created_at, Date) <= end_date)
+        
+        return query.count()
     
     @staticmethod
     def toggle_reaction(db: Session, memorial_id: int, reaction_type: str, visitor_id: str) -> dict:
