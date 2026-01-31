@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_serializer
 from datetime import datetime
 from typing import Optional, List
+import os
 
 # --- ESQUEMAS DE MEMORIAL (Básico por ahora) ---
 class MemorialBase(BaseModel):
@@ -28,7 +29,16 @@ class MemorialResponse(MemorialCreate):
     slug: str
     owner_id: int
     created_at: datetime
+    image_filename: Optional[str] = None
     
+    @field_serializer('image_filename')
+    def serialize_image_url(self, filename: Optional[str], _info):
+        if filename:
+            # Reemplaza con tu URL base del backend
+            base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+            return f"{base_url}/static/{filename}"
+        return None
+        
     class Config:
         from_attributes = True
         
@@ -60,9 +70,16 @@ class PublicMemorial(BaseModel):
     name: str
     epitaph: Optional[str] = None
     bio: Optional[str] = None
-    # birth_date: ... (puedes agregarlo si quieres)
-    # death_date: ...
-    
+    image_filename: Optional[str] = None
+
+    @field_serializer('image_filename')
+    def serialize_image_url(self, filename: Optional[str], _info):
+        if filename:
+            # Reemplaza con tu URL base del backend
+            base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+            return f"{base_url}/static/{filename}"
+        return None
+        
     class Config:
         from_attributes = True
 

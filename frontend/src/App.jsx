@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // <--- Importamos Router
-import Login from './Login';
-import Dashboard from './Dashboard';
-import PublicMemorial from './PublicMemorial'; // <--- Importamos el nuevo componente
+import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import PublicMemorial from './pages/PublicMemorial.jsx'; // <--- Importamos el nuevo componente
 
 // Componente "Protegido" (El antiguo App)
 function AdminLayout() {
@@ -23,20 +23,20 @@ function AdminLayout() {
   if (loadingAuth) return null; // Evita parpadeos
 
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#f4f4f9', minHeight: '100vh' }}>
-      <nav style={{ padding: '15px 20px', backgroundColor: '#333', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong style={{ fontSize: '1.2em' }}>🕊️ Memorial QR (Admin)</strong>
+    <div className="font-sans bg-gray-50 min-h-screen">
+      <nav className="px-5 py-4 bg-gray-800 text-white flex justify-between items-center">
+        <strong className="text-xl">🕊️ Memorial QR (Admin)</strong>
         {isAuthenticated && (
           <button 
             onClick={handleLogout} 
-            style={{ background: 'transparent', border: '1px solid white', color: 'white', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
+            className="bg-transparent border border-white text-white px-3 py-1 rounded hover:bg-white hover:text-gray-800 transition-colors cursor-pointer"
           >
             Cerrar Sesión
           </button>
         )}
       </nav>
 
-      <div style={{ maxWidth: '1000px', margin: '20px auto', padding: '0 20px' }}>
+      <div className="max-w-5xl mx-auto my-5 px-5">
         {isAuthenticated ? (
           <Dashboard />
         ) : (

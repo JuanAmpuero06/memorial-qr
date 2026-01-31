@@ -17,6 +17,7 @@ services:
     build: ./backend
     volumes:
       - ./backend/app:/code/app  # ¡Hot Reload! Cambias código y se actualiza solo
+      - ./backend/uploaded_images:/code/uploaded_images
     ports:
       - "8000:8000"
     env_file:

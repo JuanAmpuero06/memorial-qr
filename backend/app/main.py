@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import timedelta
 from typing import List
+from fastapi import File, UploadFile
+from fastapi.staticfiles import StaticFiles
 import qrcode
+import uuid
+import shutil
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 import os # Para leer el .env
@@ -17,6 +21,16 @@ from . import models, database, schemas, crud, auth
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Memorial QR API", version="0.1.0")
+
+# Configuración del directorio de subida de imágenes
+# --- CONFIGURACIÓN DE IMÁGENES ---
+# Crear la carpeta si no existe
+UPLOAD_DIR = "uploaded_images"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Esto hace que lo que esté en la carpeta "uploaded_images" sea visible en "http://localhost:8000/static"
+app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
+
 
 # --- CONFIGURACIÓN DE CORS (Permitir conexión con React) ---
 origins = [
@@ -140,3 +154,33 @@ def read_public_memorial(slug: str, db: Session = Depends(get_db)):
     if db_memorial is None:
         raise HTTPException(status_code=404, detail="Memorial no encontrado")
     return db_memorial
+
+# --- 9. SUBIR FOTO (Protegido) ---
+@app.post("/memorials/{memorial_id}/upload-photo", response_model=schemas.MemorialResponse)
+def upload_photo(
+    memorial_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # 1. Buscar el memorial y verificar que sea del usuario
+    memorial = db.query(models.Memorial).filter(models.Memorial.id == memorial_id).first()
+    if not memorial:
+        raise HTTPException(status_code=404, detail="Memorial no encontrado")
+    if memorial.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para editar este memorial")
+
+    # 2. Generar un nombre único para el archivo (para evitar sobreescribir)
+    # Ej: "foto-perfil.jpg" -> "a1b2c3d4... .jpg"
+    file_extension = file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = f"{UPLOAD_DIR}/{unique_filename}"
+
+    # 3. Guardar el archivo en el disco
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 4. Actualizar la base de datos
+    memorial.image_filename = unique_filename
+    db.commit()
+    db.refresh(memorial)
