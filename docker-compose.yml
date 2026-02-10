@@ -2,7 +2,7 @@ services:
   # --- BALANCEADOR DE CARGA / REVERSE PROXY ---
   traefik:
     image: traefik:v3.0
-    restart: always
+    restart: "no"
     ports:
       - "80:80"       # HTTP
       - "443:443"     # HTTPS
@@ -20,7 +20,7 @@ services:
   # --- SERVICIO DE BASE DE DATOS ---
   db:
     image: postgres:15-alpine
-    restart: always
+    restart: "no"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
@@ -33,7 +33,7 @@ services:
   # --- SERVICIO DE BACKEND (API) ---
   backend:
     build: ./backend
-    restart: always
+    restart: "no"
     volumes:
       - ./backend/app:/code/app  # ¡Hot Reload! Cambias código y se actualiza solo
       - ./backend/uploaded_images:/code/uploaded_images
@@ -58,7 +58,7 @@ services:
   # --- SERVICIO DE ADMINISTRACIÓN (Visual) ---
   pgadmin:
     image: dpage/pgadmin4
-    restart: always
+    restart: "no"
     env_file:
       - .env
     ports:
@@ -71,7 +71,7 @@ services:
   # --- SERVICIO DE FRONTEND ---
   frontend:
     build: ./frontend
-    restart: always
+    restart: "no"
     expose:
       - "5173"
     volumes:
